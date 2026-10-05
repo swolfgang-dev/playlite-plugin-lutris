@@ -181,7 +181,7 @@ class Plugin(IntegrationPlugin):
             row.addWidget(browse)
             form.addRow(title, row)
         layout.addLayout(form)
-        hint = QLabel('Folder selectors start here when no game path is set. Choose the containing folders for your installations and Wine prefixes.')
+        hint = QLabel('Folder selectors always start here when a default is configured. Choose the containing folders for your installations and Wine prefixes.')
         hint.setWordWrap(True)
         layout.addWidget(hint)
         button = QPushButton('Open Lutris library folder')

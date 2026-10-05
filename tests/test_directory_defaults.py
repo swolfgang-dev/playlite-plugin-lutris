@@ -50,7 +50,7 @@ class DirectoryDefaultsTests(unittest.TestCase):
                 self.assertEqual(choose.call_args.args[2], default)
                 widget.fields[key].setText(default + '/example')
                 widget.findChild(QPushButton, 'browse' + key).click()
-                self.assertEqual(choose.call_args.args[2], default + '/example')
+                self.assertEqual(choose.call_args.args[2], default)
 
     def test_lutris_add_passes_defaults_to_selectors(self):
         from lutris_defaults_under_test.add import Plugin as Add
