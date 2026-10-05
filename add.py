@@ -1,7 +1,7 @@
 from playlite.manual_installation import ManualInstallation
 from pathlib import Path
 import re
-from PyQt6.QtWidgets import QComboBox, QCheckBox
+from PyQt6.QtWidgets import QComboBox, QCheckBox, QHBoxLayout, QSizePolicy, QPushButton
 from playlite.providers import InstallationPlugin, discover_plugins
 from .registration import plan, normalize_runner
 from .runners import runner_choices, validate_runner
@@ -58,6 +58,8 @@ class Plugin(InstallationPlugin):
         autofill()
         widget.runner = QComboBox()
         widget.runner.setObjectName('WineRunner')
+        widget.runner.setFixedHeight(widget.fields['Prefix'].height())
+        widget.runner.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         for title, version in runner_choices():
             widget.runner.addItem(title, version)
         selected_runner = normalize_runner(game.get('WineRunner') or 'ge-proton')
@@ -67,7 +69,12 @@ class Plugin(InstallationPlugin):
             index = widget.runner.count() - 1
             widget.runner.model().item(index).setEnabled(False)
         widget.runner.setCurrentIndex(index)
-        widget.layout().insertRow(3, 'Wine runner', widget.runner)
+        runner_row = QHBoxLayout()
+        runner_row.setSpacing(8)
+        runner_row.addWidget(widget.runner)
+        browse = widget.findChild(QPushButton, 'browsePrefix')
+        runner_row.addSpacing(browse.sizeHint().width() + runner_row.spacing())
+        widget.layout().insertRow(3, 'Wine runner', runner_row)
         widget.create_prefix = QCheckBox('Create prefix folder if it does not exist')
         widget.create_prefix.setChecked(True)
         widget.layout().insertRow(4, '', widget.create_prefix)
