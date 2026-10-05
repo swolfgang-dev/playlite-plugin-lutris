@@ -12,7 +12,7 @@ class Plugin(InstallationPlugin):
         plugins = discover_plugins()
         self.manual = ManualInstallation()
         self.lutris = plugins['Lutris']
-        widget = self.manual.create_editor(editor, game)
+        widget = self.manual.create_editor(editor, game, directory_defaults=self.lutris.directory_defaults())
         widget.runner = QLineEdit(game.get('WineRunner') or 'GE-Proton')
         widget.layout().insertRow(3, 'Wine runner', widget.runner)
         widget.create_prefix = QCheckBox('Create prefix folder if it does not exist')

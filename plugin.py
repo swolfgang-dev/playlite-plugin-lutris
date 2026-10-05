@@ -128,8 +128,31 @@ class Plugin(IntegrationPlugin):
                           'IsInstalled': bool(row.get('installed'))})
         return games
 
+    def directory_defaults(self):
+        from PyQt6.QtCore import QSettings
+        settings = QSettings('Playlite', 'Lutris')
+        return {key: settings.value(key, '', type=str)
+                for key in ('InstallDirectory', 'Prefix')}
+
+    def create_action_editor(self, action, parent=None):
+        from playlite.play_actions import LaunchSettings
+        return LaunchSettings(action, parent, directory_defaults=self.directory_defaults())
+
+    def save_settings(self, widget):
+        from PyQt6.QtCore import QSettings
+        values = {key: field.text().strip() for key, field in widget.directory_fields.items()}
+        for value in values.values():
+            if value and not Path(value).is_absolute():
+                raise ValueError('Default folder paths must be absolute Linux paths.')
+            if value and Path(value).exists() and not Path(value).is_dir():
+                raise ValueError('Default folder paths must point to directories.')
+        settings = QSettings('Playlite', 'Lutris')
+        for key, value in values.items():
+            settings.setValue(key, value)
+        settings.sync()
+
     def create_settings(self, parent=None):
-        from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton
+        from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QFormLayout, QLineEdit, QHBoxLayout
         from PyQt6.QtCore import QUrl
         from PyQt6.QtGui import QDesktopServices
         widget = QWidget(parent)
@@ -137,6 +160,30 @@ class Plugin(IntegrationPlugin):
         description = QLabel('Imports or creates Lutris entries, launches through Lutris, and detects running games using Lutris sessions and game paths.')
         description.setWordWrap(True)
         layout.addWidget(description)
+        from playlite.lifecycle import choose_directory
+        form = QFormLayout()
+        widget.directory_fields = {}
+        defaults = self.directory_defaults()
+        for key, title in [('InstallDirectory', 'Default installation parent folder'),
+                           ('Prefix', 'Default Wine prefix parent folder')]:
+            field = QLineEdit(defaults[key])
+            field.setPlaceholderText('No default folder')
+            field.setObjectName('default' + key)
+            widget.directory_fields[key] = field
+            row = QHBoxLayout()
+            row.addWidget(field)
+            browse = QPushButton('Browse…')
+            def select(checked=False, field=field, title=title):
+                directory = choose_directory(widget, title, field.text())
+                if directory:
+                    field.setText(directory)
+            browse.clicked.connect(select)
+            row.addWidget(browse)
+            form.addRow(title, row)
+        layout.addLayout(form)
+        hint = QLabel('Folder selectors start here when no game path is set. Choose the containing folders for your installations and Wine prefixes.')
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
         button = QPushButton('Open Lutris library folder')
         button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(LUTRIS))))
         layout.addWidget(button)
