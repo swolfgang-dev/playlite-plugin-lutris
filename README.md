@@ -4,7 +4,7 @@ Import, register, launch, and detect Lutris games, with playtime tracking.
 
 This repository contains only this plugin. Playlite itself lives in
 [swolfgang-dev/Playlite](https://github.com/swolfgang-dev/Playlite).
-Requires Playlite 0.2.9 or later, plugin API 1.
+Requires Playlite 0.2.10 or later, plugin API 1.
 
 ## Installation
 
@@ -22,8 +22,8 @@ Playlite's existing user-data folders.
 
 In Settings → Plugins → Installation → Lutris Integration, set the default installation
 parent folder and Wine prefix parent folder. Add to Lutris and Lutris play-action
-folder selectors always open there, even when a game path is already set.
-Without a default, the current game path is used. When adding a game beneath the installation parent,
+folder selectors open at the field’s own path when filled, or at its configured
+default when empty. New prefix paths open at their nearest existing parent. When adding a game beneath the installation parent,
 its first folder under that parent prefills the metadata name and a kebab-case
 prefix path under the prefix parent. For example, `The Witcher 3/bin/game.exe`
 prefills `The Witcher 3` and `<prefix parent>/the-witcher-3`. Custom names and

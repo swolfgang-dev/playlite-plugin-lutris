@@ -1,11 +1,11 @@
 {
   "id": "Lutris",
   "name": "Lutris Integration",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "api_version": 1,
   "type": "integration",
   "repository": "swolfgang-dev/playlite-plugin-lutris",
-  "minimum_playlite_version": "0.2.9",
+  "minimum_playlite_version": "0.2.10",
   "requirements": [
     "PyYAML>=6"
   ],
