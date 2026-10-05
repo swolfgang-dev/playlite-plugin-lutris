@@ -231,6 +231,8 @@ class WorkflowTests(unittest.TestCase):
             dialog.fields['Executable'].setText(str(exe))
             dialog.fields['Prefix'].setText(str(root / 'prefix'))
             plugin = dialog.installation_plugin
+            self.assertTrue(dialog.installation_widget.create_prefix.isChecked())
+            dialog.installation_widget.create_prefix.setChecked(False)
             with patch.object(plugin.lutris, 'register', return_value={'id': 42, 'prefix': str(root / 'prefix')}) as register_game:
                 dialog.save()
                 register_game.assert_not_called()
