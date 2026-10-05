@@ -29,7 +29,9 @@ prefix path under the prefix parent. For example, `The Witcher 3/bin/game.exe`
 prefills `The Witcher 3` and `<prefix parent>/the-witcher-3`. Custom names and
 prefix paths are preserved. Installation paths beneath the default parent are
 trimmed to the first game folder, removing nested executable folders. Prefix
-folder creation is checked by default. Clear a default to restore normal browsing.
+folder creation is checked by default. The default Wine runner is `ge-proton`,
+Lutris’s identifier for GE-Proton (Latest). Older `GE-Proton` input is normalized
+on registration; explicit versioned runner names are preserved. Clear a default to restore normal browsing.
 
 ## Releases
 

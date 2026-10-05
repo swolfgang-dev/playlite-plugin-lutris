@@ -80,9 +80,15 @@ def existing_locations(executable, lutris=LUTRIS):
     return rows[0][0], saved.get('game', {}).get('prefix', '')
 
 
-def register(p, runner='GE-Proton', lutris=LUTRIS, state=STATE, arguments=''):
+def normalize_runner(runner):
+    runner = runner.strip()
+    return 'ge-proton' if runner.casefold() in ('ge-proton', 'ge-proton (latest)') else runner
+
+
+def register(p, runner='ge-proton', lutris=LUTRIS, state=STATE, arguments=''):
     if not runner.strip() or any(ord(c) < 32 for c in runner):
         raise ValueError('Choose a Wine runner.')
+    runner = normalize_runner(runner)
     database = lutris / 'pga.db'
     if not database.is_file():
         raise ValueError('Lutris database not found. Open Lutris once first.')

@@ -3,7 +3,7 @@ from pathlib import Path
 import re
 from PyQt6.QtWidgets import QLineEdit, QCheckBox
 from playlite.providers import InstallationPlugin, discover_plugins
-from .registration import plan
+from .registration import plan, normalize_runner
 
 
 class Plugin(InstallationPlugin):
@@ -55,7 +55,7 @@ class Plugin(InstallationPlugin):
                 widget.autofilled_prefix = prefix
         widget.fields['InstallDirectory'].textChanged.connect(autofill)
         autofill()
-        widget.runner = QLineEdit(game.get('WineRunner') or 'GE-Proton')
+        widget.runner = QLineEdit(normalize_runner(game.get('WineRunner') or 'ge-proton'))
         widget.layout().insertRow(3, 'Wine runner', widget.runner)
         widget.create_prefix = QCheckBox('Create prefix folder if it does not exist')
         widget.create_prefix.setChecked(True)
@@ -70,7 +70,7 @@ class Plugin(InstallationPlugin):
             raise ValueError('Choose an executable and installation folder.')
         if not game.get('Prefix'):
             raise ValueError('Enter a Wine prefix location.')
-        runner = widget.runner.text().strip()
+        runner = normalize_runner(widget.runner.text())
         if not runner:
             raise ValueError('Enter a Wine runner.')
         registration = plan(game['Executable'], game['Name'],
@@ -92,7 +92,7 @@ class Plugin(InstallationPlugin):
 
     def configure_cli(self, parser):
         ManualInstallation().configure_cli(parser)
-        parser.add_argument('--runner', default='GE-Proton')
+        parser.add_argument('--runner', default='ge-proton')
         parser.add_argument('--create-prefix', action='store_true')
 
     def cli_game(self, args, plugins):
@@ -104,7 +104,7 @@ class Plugin(InstallationPlugin):
             raise ValueError('Choose an existing prefix or pass --create-prefix.')
         if not args.runner.strip():
             raise ValueError('Enter --runner.')
-        game['WineRunner'] = args.runner
+        game['WineRunner'] = normalize_runner(args.runner)
         game['InstallationMethod'] = self.id
         return game
 

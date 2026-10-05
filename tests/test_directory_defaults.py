@@ -20,6 +20,33 @@ APP = QApplication.instance() or QApplication([])
 
 
 class DirectoryDefaultsTests(unittest.TestCase):
+    def test_registration_uses_lutris_ge_proton_identifier(self):
+        import sqlite3
+        import yaml
+        from lutris_defaults_under_test.registration import plan, register, normalize_runner
+        self.assertEqual(normalize_runner('GE-Proton'), 'ge-proton')
+        self.assertEqual(normalize_runner(' GE-Proton (Latest) '), 'ge-proton')
+        self.assertEqual(normalize_runner('GE-Proton9-27'), 'GE-Proton9-27')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            executable = root / 'Example/game.exe'
+            executable.parent.mkdir()
+            executable.touch()
+            lutris = root / 'lutris'
+            lutris.mkdir()
+            with sqlite3.connect(lutris / 'pga.db') as database:
+                database.execute('CREATE TABLE games (id INTEGER PRIMARY KEY, name, sortname, slug, platform, runner, executable, directory, installed, installed_at, configpath, playtime, service)')
+            registration = plan(executable, installation_directory=executable.parent, prefix=root / 'prefix')
+            register(registration, runner='GE-Proton', lutris=lutris, state=root / 'state')
+            config = next((lutris / 'games').glob('*.yml'))
+            self.assertEqual(yaml.safe_load(config.read_text())['wine']['version'], 'ge-proton')
+            saved = yaml.safe_load(config.read_text())
+            saved['wine']['version'] = 'GE-Proton'
+            config.write_text(yaml.safe_dump(saved))
+            result = register(registration, lutris=lutris, state=root / 'state')
+            self.assertTrue(result['reused'])
+            self.assertEqual(yaml.safe_load(config.read_text())['wine']['version'], 'ge-proton')
+
     def test_settings_save_reopen_and_validate(self):
         with tempfile.TemporaryDirectory() as root:
             settings = QSettings(str(Path(root) / 'settings.ini'), QSettings.Format.IniFormat)
