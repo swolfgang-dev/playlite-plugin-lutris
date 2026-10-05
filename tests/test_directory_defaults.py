@@ -20,6 +20,52 @@ APP = QApplication.instance() or QApplication([])
 
 
 class DirectoryDefaultsTests(unittest.TestCase):
+    def test_runner_inventory_uses_lutris_ids_and_validation(self):
+        from types import SimpleNamespace
+        from lutris_defaults_under_test.runners import runner_choices, validate_runner
+        with patch('lutris_defaults_under_test.runners.subprocess.run', return_value=SimpleNamespace(
+                stdout='["ge-proton", "Proton - Experimental", "system", "custom", "wine-build"]')):
+            choices = dict(runner_choices())
+            self.assertEqual(choices['GE-Proton (Latest)'], 'ge-proton')
+            self.assertEqual(choices['Proton - Experimental'], 'Proton - Experimental')
+            self.assertNotIn('custom', choices.values())
+            self.assertEqual(validate_runner('GE-Proton'), 'ge-proton')
+            with self.assertRaises(ValueError):
+                validate_runner('made-up-runner')
+
+    def test_runner_dropdown_retains_unavailable_values_and_cannot_be_edited(self):
+        from lutris_defaults_under_test.add import Plugin as Add
+        plugin = Plugin()
+        editor = QWidget()
+        editor.fields = {}
+        method = Add()
+        with patch.object(plugin, 'directory_defaults', return_value={}), \
+                patch('lutris_defaults_under_test.add.discover_plugins', return_value={'Lutris': plugin}), \
+                patch('lutris_defaults_under_test.add.runner_choices', return_value=[('GE-Proton (Latest)', 'ge-proton')]):
+            widget = method.create_editor(editor, {'WineRunner': 'missing-build',
+                'Executable': '/games/Example/game.exe', 'InstallDirectory': '/games/Example', 'Prefix': '/prefixes/Example'})
+        self.assertFalse(widget.runner.isEditable())
+        self.assertEqual(widget.runner.currentData(), 'missing-build')
+        self.assertFalse(widget.runner.model().item(widget.runner.currentIndex()).isEnabled())
+        with patch('lutris_defaults_under_test.runners.runner_choices', return_value=[('GE-Proton (Latest)', 'ge-proton')]):
+            with self.assertRaisesRegex(ValueError, 'available Lutris'):
+                method.collect(widget, {'Name': 'Example'})
+        widget.runner.setCurrentIndex(widget.runner.findData('ge-proton'))
+        self.assertEqual(widget.runner.currentData(), 'ge-proton')
+
+    def test_runner_inventory_fallback_only_lists_existing_wine_builds(self):
+        from lutris_defaults_under_test.runners import runner_choices
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            executable = root / 'runners/wine/installed/bin/wine'
+            executable.parent.mkdir(parents=True)
+            executable.touch()
+            (root / 'runners/wine/incomplete').mkdir()
+            with patch('lutris_defaults_under_test.runners.LUTRIS', root), \
+                    patch('lutris_defaults_under_test.runners.subprocess.run', side_effect=OSError()), \
+                    patch('lutris_defaults_under_test.runners.shutil.which', return_value=None):
+                self.assertEqual({version for _, version in runner_choices()}, {'installed', 'ge-proton'})
+
     def test_registration_uses_lutris_ge_proton_identifier(self):
         import sqlite3
         import yaml

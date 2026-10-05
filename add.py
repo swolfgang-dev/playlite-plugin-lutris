@@ -1,9 +1,10 @@
 from playlite.manual_installation import ManualInstallation
 from pathlib import Path
 import re
-from PyQt6.QtWidgets import QLineEdit, QCheckBox
+from PyQt6.QtWidgets import QComboBox, QCheckBox
 from playlite.providers import InstallationPlugin, discover_plugins
 from .registration import plan, normalize_runner
+from .runners import runner_choices, validate_runner
 
 
 class Plugin(InstallationPlugin):
@@ -55,7 +56,17 @@ class Plugin(InstallationPlugin):
                 widget.autofilled_prefix = prefix
         widget.fields['InstallDirectory'].textChanged.connect(autofill)
         autofill()
-        widget.runner = QLineEdit(normalize_runner(game.get('WineRunner') or 'ge-proton'))
+        widget.runner = QComboBox()
+        widget.runner.setObjectName('WineRunner')
+        for title, version in runner_choices():
+            widget.runner.addItem(title, version)
+        selected_runner = normalize_runner(game.get('WineRunner') or 'ge-proton')
+        index = widget.runner.findData(selected_runner)
+        if index < 0:
+            widget.runner.addItem(f'{selected_runner} (unavailable)', selected_runner)
+            index = widget.runner.count() - 1
+            widget.runner.model().item(index).setEnabled(False)
+        widget.runner.setCurrentIndex(index)
         widget.layout().insertRow(3, 'Wine runner', widget.runner)
         widget.create_prefix = QCheckBox('Create prefix folder if it does not exist')
         widget.create_prefix.setChecked(True)
@@ -70,9 +81,7 @@ class Plugin(InstallationPlugin):
             raise ValueError('Choose an executable and installation folder.')
         if not game.get('Prefix'):
             raise ValueError('Enter a Wine prefix location.')
-        runner = normalize_runner(widget.runner.text())
-        if not runner:
-            raise ValueError('Enter a Wine runner.')
+        runner = validate_runner(widget.runner.currentData())
         registration = plan(game['Executable'], game['Name'],
                             installation_directory=game['InstallDirectory'], prefix=game['Prefix'])
         if not registration.prefix.exists() and not widget.create_prefix.isChecked():
@@ -102,9 +111,7 @@ class Plugin(InstallationPlugin):
         registration = plan(game['Executable'], game['Name'], installation_directory=game['InstallDirectory'], prefix=game['Prefix'])
         if not registration.prefix.exists() and not args.create_prefix:
             raise ValueError('Choose an existing prefix or pass --create-prefix.')
-        if not args.runner.strip():
-            raise ValueError('Enter --runner.')
-        game['WineRunner'] = normalize_runner(args.runner)
+        game['WineRunner'] = validate_runner(args.runner)
         game['InstallationMethod'] = self.id
         return game
 

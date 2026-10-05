@@ -213,6 +213,7 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(dialog.fields['Name'].text(), 'Lutris example')
             self.assertEqual(dialog.fields['Prefix'].text(), '/prefixes/example')
             self.assertFalse((root / 'library.json').exists())
+            dialog.autocrack.setChecked(False)
             dialog.save()
             self.assertEqual(dialog.result_game['InstallationMethod'], 'LutrisImport')
             self.assertEqual(dialog.result_game['GameProvider'], 'Lutris')
@@ -231,6 +232,7 @@ class WorkflowTests(unittest.TestCase):
             dialog.fields['Executable'].setText(str(exe))
             dialog.fields['Prefix'].setText(str(root / 'prefix'))
             plugin = dialog.installation_plugin
+            dialog.autocrack.setChecked(False)
             self.assertTrue(dialog.installation_widget.create_prefix.isChecked())
             dialog.installation_widget.create_prefix.setChecked(False)
             with patch.object(plugin.lutris, 'register', return_value={'id': 42, 'prefix': str(root / 'prefix')}) as register_game:
