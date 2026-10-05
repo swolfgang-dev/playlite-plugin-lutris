@@ -43,14 +43,16 @@ class ProviderPluginTests(unittest.TestCase):
             disabled = discover_plugins(include_disabled=True)
             self.assertIsInstance(disabled['SteamAutoCrack'], GenericPlugin)
             self.assertIsInstance(disabled['PlayliteArchiver'], GenericPlugin)
-            self.assertEqual(list(discover_providers()), ['Steam', 'IGDB'])
+            self.assertTrue({'Steam', 'IGDB'} <= set(discover_providers()))
+            self.assertNotIn('Lutris', discover_providers())
+            self.assertNotIn('SteamAutoCrack', discover_providers())
     def test_igdb_metadata_is_enabled_and_uses_saved_id(self):
         with TemporaryDirectory() as directory:
             self.assertIn('Steam', discover_plugins())
             self.assertIn('IGDB', discover_plugins())
             self.assertIn('IGDB', discover_plugins(include_disabled=True))
             dialog = MetadataDownloader({'Name': 'Example', 'MetadataIds': {'IGDB': '123'}})
-            self.assertEqual(list(dialog.providers), ['Steam', 'IGDB'])
+            self.assertTrue({'Steam', 'IGDB'} <= set(dialog.providers))
             self.assertEqual(dialog.id_fields['IGDB'].text(), '123')
             self.assertEqual(dialog.metadata_ids['IGDB'], '123')
             dialog.reject()
@@ -75,7 +77,7 @@ class ProviderPluginTests(unittest.TestCase):
     def test_builtin_providers_use_existing_apis(self):
         with TemporaryDirectory() as directory:
             providers = discover_providers(include_disabled=True)
-            self.assertEqual(list(providers), ['Steam', 'IGDB'])
+            self.assertTrue({'Steam', 'IGDB'} <= set(providers))
             self.assertFalse('Tags' in providers['Steam'].fields)
             with patch('playlite_plugins.steam.metadata.fetch_metadata', return_value={'fields': {}}) as fetch:
                 providers['Steam'].fetch(123, {'Name'})

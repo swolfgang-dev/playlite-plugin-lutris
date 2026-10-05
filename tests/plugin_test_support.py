@@ -8,3 +8,14 @@ def require_plugin(identity):
     if plugin is None:
         raise unittest.SkipTest(f'Install the {identity} plugin to run its integration tests.')
     return plugin
+
+
+def wait_for_runners(widget):
+    import time
+    from PyQt6.QtWidgets import QApplication
+    deadline = time.monotonic() + 12
+    while widget.runner_choices is None and time.monotonic() < deadline:
+        QApplication.processEvents()
+        time.sleep(.005)
+    if widget.runner_choices is None:
+        raise AssertionError('Lutris runner discovery did not finish')

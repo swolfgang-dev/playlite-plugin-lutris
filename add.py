@@ -4,7 +4,7 @@ import re
 from PyQt6.QtWidgets import QComboBox, QCheckBox, QHBoxLayout, QSizePolicy, QPushButton
 from playlite.providers import InstallationPlugin, discover_plugins
 from .registration import plan, normalize_runner
-from .runners import runner_choices, validate_runner
+from .runners import validate_runner
 
 
 class Plugin(InstallationPlugin):
@@ -60,21 +60,53 @@ class Plugin(InstallationPlugin):
         widget.runner.setObjectName('WineRunner')
         widget.runner.setFixedHeight(widget.fields['Prefix'].height())
         widget.runner.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
-        for title, version in runner_choices():
-            widget.runner.addItem(title, version)
         selected_runner = normalize_runner(game.get('WineRunner') or 'ge-proton')
-        index = widget.runner.findData(selected_runner)
-        if index < 0:
-            widget.runner.addItem(f'{selected_runner} (unavailable)', selected_runner)
-            index = widget.runner.count() - 1
-            widget.runner.model().item(index).setEnabled(False)
-        widget.runner.setCurrentIndex(index)
+        widget.runner_choices = None
         runner_row = QHBoxLayout()
         runner_row.setSpacing(8)
         runner_row.addWidget(widget.runner)
         browse = widget.findChild(QPushButton, 'browsePrefix')
-        runner_row.addSpacing(browse.sizeHint().width() + runner_row.spacing())
+        widget.refresh_runners = QPushButton('Refresh')
+        widget.refresh_runners.setFixedSize(browse.sizeHint().width(), widget.runner.height())
+        runner_row.addWidget(widget.refresh_runners)
         widget.layout().insertRow(3, 'Wine runner', runner_row)
+        from .runner_loader import RunnerLoader
+        widget.runner_loader = RunnerLoader(widget)
+
+        def loaded(choices):
+            widget.runner_choices = choices
+            widget.runner.clear()
+            for title, version in choices:
+                widget.runner.addItem(title, version)
+            index = widget.runner.findData(widget.selected_runner)
+            if index < 0:
+                widget.runner.addItem(f'{widget.selected_runner} (unavailable)', widget.selected_runner)
+                index = widget.runner.count() - 1
+                widget.runner.model().item(index).setEnabled(False)
+            widget.runner.setCurrentIndex(index)
+            widget.runner.setEnabled(True)
+            widget.runner.setToolTip('')
+            widget.refresh_runners.setEnabled(True)
+
+        def failed(message):
+            widget.runner.clear()
+            widget.runner.addItem('Could not load runners')
+            widget.runner.setToolTip(message)
+            widget.refresh_runners.setEnabled(True)
+
+        def refresh():
+            widget.selected_runner = widget.runner.currentData() or selected_runner
+            widget.runner_choices = None
+            widget.runner.clear()
+            widget.runner.addItem('Loading runners…')
+            widget.runner.setEnabled(False)
+            widget.refresh_runners.setEnabled(False)
+            widget.runner_loader.refresh()
+
+        widget.runner_loader.loaded.connect(loaded)
+        widget.runner_loader.failed.connect(failed)
+        widget.refresh_runners.clicked.connect(refresh)
+        refresh()
         widget.create_prefix = QCheckBox('Create prefix folder if it does not exist')
         widget.create_prefix.setChecked(True)
         widget.layout().insertRow(4, '', widget.create_prefix)
@@ -88,7 +120,9 @@ class Plugin(InstallationPlugin):
             raise ValueError('Choose an executable and installation folder.')
         if not game.get('Prefix'):
             raise ValueError('Enter a Wine prefix location.')
-        runner = validate_runner(widget.runner.currentData())
+        if widget.runner_choices is None:
+            raise ValueError('Wait for Lutris runners to load, or refresh and try again.')
+        runner = validate_runner(widget.runner.currentData(), widget.runner_choices)
         registration = plan(game['Executable'], game['Name'],
                             installation_directory=game['InstallDirectory'], prefix=game['Prefix'])
         if not registration.prefix.exists() and not widget.create_prefix.isChecked():

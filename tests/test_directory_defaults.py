@@ -20,6 +20,12 @@ APP = QApplication.instance() or QApplication([])
 
 
 class DirectoryDefaultsTests(unittest.TestCase):
+    def setUp(self):
+        pool = patch('lutris_defaults_under_test.runner_loader.QThreadPool.globalInstance')
+        mocked = pool.start()
+        mocked.return_value.start.side_effect = lambda task: task.run()
+        self.addCleanup(pool.stop)
+
     def test_runner_inventory_uses_lutris_ids_and_validation(self):
         from types import SimpleNamespace
         from lutris_defaults_under_test.runners import runner_choices, validate_runner
@@ -41,7 +47,7 @@ class DirectoryDefaultsTests(unittest.TestCase):
         method = Add()
         with patch.object(plugin, 'directory_defaults', return_value={}), \
                 patch('lutris_defaults_under_test.add.discover_plugins', return_value={'Lutris': plugin}), \
-                patch('lutris_defaults_under_test.add.runner_choices', return_value=[('GE-Proton (Latest)', 'ge-proton')]):
+                patch('lutris_defaults_under_test.runner_loader.runner_choices', return_value=[('GE-Proton (Latest)', 'ge-proton')]):
             widget = method.create_editor(editor, {'WineRunner': 'missing-build',
                 'Executable': '/games/Example/game.exe', 'InstallDirectory': '/games/Example', 'Prefix': '/prefixes/Example'})
         self.assertFalse(widget.runner.isEditable())

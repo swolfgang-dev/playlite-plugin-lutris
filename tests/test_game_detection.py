@@ -1,4 +1,4 @@
-from plugin_test_support import require_plugin
+from plugin_test_support import require_plugin, wait_for_runners
 require_plugin('Lutris')
 import os
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
@@ -117,6 +117,7 @@ class IntegrationTests(unittest.TestCase):
                 editor.fields['Executable'].setText('/games/example/game.exe')
                 editor.fields['SteamId'].setText('123')
                 editor.installation_method.setCurrentIndex(editor.installation_method.findData('LutrisAdd'))
+                wait_for_runners(editor.installation_widget)
                 editor.installation_widget.runner.setCurrentIndex(editor.installation_widget.runner.count() - 1)
                 selected_runner = editor.installation_widget.runner.currentData()
                 editor.installation_method.setCurrentIndex(editor.installation_method.findData('Manual'))

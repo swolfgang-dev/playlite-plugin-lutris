@@ -3,14 +3,15 @@ import json
 import shutil
 import subprocess
 from .registration import LUTRIS, normalize_runner
+from .runtime import inventory_command
 
 
 def runner_choices():
     # Use Lutris's own Python environment, independently of Playlite's venv.
-    command = ['/usr/bin/python3', '-c',
-               'import json; from lutris.util.wine.wine import get_installed_wine_versions; '
-               'print(json.dumps(get_installed_wine_versions()))']
+    script = ('import json; from lutris.util.wine.wine import get_installed_wine_versions; '
+              'print(json.dumps(get_installed_wine_versions()))')
     try:
+        command = inventory_command(script)
         result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=10)
         versions = json.loads(result.stdout)
         if not isinstance(versions, list) or not all(isinstance(item, str) for item in versions):
@@ -31,8 +32,8 @@ def runner_choices():
             sorted(versions, key=lambda value: (value != 'ge-proton', value.casefold()))]
 
 
-def validate_runner(runner):
+def validate_runner(runner, choices=None):
     runner = normalize_runner(runner or '')
-    if runner not in {version for _, version in runner_choices()}:
+    if runner not in {version for _, version in (runner_choices() if choices is None else choices)}:
         raise ValueError('Choose an available Lutris Wine runner. The selected runner is no longer available.')
     return runner

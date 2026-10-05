@@ -1,4 +1,4 @@
-from plugin_test_support import require_plugin
+from plugin_test_support import require_plugin, wait_for_runners
 require_plugin('IconStudio')
 require_plugin('Lutris')
 require_plugin('SteamAutoCrack')
@@ -228,6 +228,7 @@ class WorkflowTests(unittest.TestCase):
             exe.parent.mkdir()
             exe.touch()
             dialog = AddGameEditor(None, root / 'library', installation_method='LutrisAdd')
+            wait_for_runners(dialog.installation_widget)
             dialog.fields['Name'].setText('Example')
             dialog.fields['Executable'].setText(str(exe))
             dialog.fields['Prefix'].setText(str(root / 'prefix'))

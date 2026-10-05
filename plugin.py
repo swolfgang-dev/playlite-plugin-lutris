@@ -1,4 +1,3 @@
-import shutil
 import sqlite3
 import subprocess
 import uuid
@@ -7,6 +6,7 @@ from pathlib import Path
 from contextlib import closing
 from playlite.providers import IntegrationPlugin
 from .registration import LUTRIS, register
+from .runtime import launch_command
 
 
 class Plugin(IntegrationPlugin):
@@ -89,10 +89,7 @@ class Plugin(IntegrationPlugin):
     def launch(self, game):
         if not str(game.get('LutrisId') or '').isascii() or not str(game.get('LutrisId') or '').isdigit():
             raise ValueError('Set a valid Lutris game ID on the Installation page.')
-        executable = shutil.which('lutris')
-        if not executable:
-            raise ValueError('Install Lutris to launch this game.')
-        return subprocess.Popen([executable, f'lutris:rungameid/{game["LutrisId"]}'], start_new_session=True)
+        return subprocess.Popen(launch_command(f'lutris:rungameid/{game["LutrisId"]}'), start_new_session=True)
 
     def register(self, registration, runner, arguments=''):
         return register(registration, runner=runner, arguments=arguments)

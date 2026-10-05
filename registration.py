@@ -14,7 +14,7 @@ import yaml
 
 ROOT = Path.home() / 'Games'
 PREFIXES = Path(os.environ.get('XDG_DATA_HOME', str(Path.home() / '.local/share'))) / 'playlite/prefixes'
-LUTRIS = Path.home() / '.local/share/lutris'
+from .runtime import LUTRIS
 STATE = Path.home() / '.local/state/playlite'
 
 
