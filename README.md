@@ -23,8 +23,11 @@ Playlite's existing user-data folders.
 In Settings → Plugins → Installation → Lutris Integration, set the default installation
 parent folder and Wine prefix parent folder. Add to Lutris and Lutris play-action
 folder selectors open there when their corresponding path is empty. Existing
-paths take precedence. These defaults are browsing locations; select the actual
-game folder or prefix before saving. Clear a default to restore normal browsing.
+paths take precedence. When adding a game beneath the installation parent,
+its first folder under that parent prefills the metadata name and a kebab-case
+prefix path under the prefix parent. For example, `The Witcher 3/bin/game.exe`
+prefills `The Witcher 3` and `<prefix parent>/the-witcher-3`. Custom names and
+prefix paths are preserved. Clear a default to restore normal browsing.
 
 ## Releases
 

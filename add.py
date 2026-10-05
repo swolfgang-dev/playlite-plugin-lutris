@@ -1,5 +1,6 @@
 from playlite.manual_installation import ManualInstallation
 from pathlib import Path
+import re
 from PyQt6.QtWidgets import QLineEdit, QCheckBox
 from playlite.providers import InstallationPlugin, discover_plugins
 from .registration import plan
@@ -13,6 +14,42 @@ class Plugin(InstallationPlugin):
         self.manual = ManualInstallation()
         self.lutris = plugins['Lutris']
         widget = self.manual.create_editor(editor, game, directory_defaults=self.lutris.directory_defaults())
+        defaults = self.lutris.directory_defaults()
+        widget.autofilled_name = ''
+        widget.autofilled_prefix = ''
+        name_field = editor.fields.get('Name')
+        # Add Game initially names an executable after its containing folder.
+        initial_directory_name = Path(game.get('Executable') or '/').parent.name
+        initial_name = name_field.text() if name_field is not None else ''
+        if initial_name == initial_directory_name:
+            widget.autofilled_name = initial_name
+
+        def autofill(*unused):
+            root = defaults.get('InstallDirectory', '')
+            selected = widget.fields['InstallDirectory'].text().strip()
+            if not root or not selected:
+                return
+            try:
+                relative = Path(selected).resolve().relative_to(Path(root).resolve())
+            except (ValueError, OSError):
+                return
+            if not relative.parts:
+                return
+            name = relative.parts[0]
+            if name_field is not None and (not name_field.text().strip() or name_field.text() == widget.autofilled_name):
+                name_field.setText(name)
+                widget.autofilled_name = name
+            prefix_root = defaults.get('Prefix', '')
+            words = re.sub(r'([a-z0-9])([A-Z])', r'\1-\2', name)
+            words = re.sub(r'([A-Z])([A-Z][a-z])', r'\1-\2', words)
+            slug = re.sub(r'[^\w]+', '-', words.casefold().replace('_', '-')).strip('-')
+            prefix_field = widget.fields['Prefix']
+            if prefix_root and slug and (not prefix_field.text().strip() or prefix_field.text() == widget.autofilled_prefix):
+                prefix = str(Path(prefix_root) / slug)
+                prefix_field.setText(prefix)
+                widget.autofilled_prefix = prefix
+        widget.fields['InstallDirectory'].textChanged.connect(autofill)
+        autofill()
         widget.runner = QLineEdit(game.get('WineRunner') or 'GE-Proton')
         widget.layout().insertRow(3, 'Wine runner', widget.runner)
         widget.create_prefix = QCheckBox('Create prefix folder if it does not exist')

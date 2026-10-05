@@ -66,6 +66,43 @@ class DirectoryDefaultsTests(unittest.TestCase):
             self.assertEqual(choose.call_args.args[2], '/prefixes')
             self.assertEqual(widget.fields['Prefix'].text(), '')
 
+    def test_autofill_from_top_level_game_folder(self):
+        from lutris_defaults_under_test.add import Plugin as Add
+        from PyQt6.QtWidgets import QLineEdit
+        plugin = Plugin()
+        editor = QWidget()
+        editor.fields = {'Name': QLineEdit()}
+        with patch.object(plugin, 'directory_defaults', return_value={
+                'InstallDirectory': '/games', 'Prefix': '/prefixes'}), \
+                patch('lutris_defaults_under_test.add.discover_plugins', return_value={'Lutris': plugin}):
+            widget = Add().create_editor(editor, {})
+        widget.fields['Executable'].setText('/games/The Witcher 3/bin/x64/game.exe')
+        self.assertEqual(editor.fields['Name'].text(), 'The Witcher 3')
+        self.assertEqual(widget.fields['Prefix'].text(), '/prefixes/the-witcher-3')
+        widget.fields['Executable'].setText('/games/AnotherGame/bin/game.exe')
+        self.assertEqual(editor.fields['Name'].text(), 'AnotherGame')
+        self.assertEqual(widget.fields['Prefix'].text(), '/prefixes/another-game')
+        editor.fields['Name'].setText('My custom title')
+        widget.fields['Prefix'].setText('/custom/prefix')
+        widget.fields['Executable'].setText('/games/Third Game/bin/game.exe')
+        self.assertEqual(editor.fields['Name'].text(), 'My custom title')
+        self.assertEqual(widget.fields['Prefix'].text(), '/custom/prefix')
+
+    def test_autofill_requires_game_beneath_default_root(self):
+        from lutris_defaults_under_test.add import Plugin as Add
+        from PyQt6.QtWidgets import QLineEdit
+        plugin = Plugin()
+        editor = QWidget()
+        editor.fields = {'Name': QLineEdit()}
+        with patch.object(plugin, 'directory_defaults', return_value={
+                'InstallDirectory': '/games', 'Prefix': '/prefixes'}), \
+                patch('lutris_defaults_under_test.add.discover_plugins', return_value={'Lutris': plugin}):
+            widget = Add().create_editor(editor, {})
+        for folder in ('/games', '/games-other/Example', '/other/Example'):
+            widget.fields['InstallDirectory'].setText(folder)
+            self.assertEqual(editor.fields['Name'].text(), '')
+            self.assertEqual(widget.fields['Prefix'].text(), '')
+
     def test_action_selectors_use_defaults(self):
         plugin = Plugin()
         with patch.object(plugin, 'directory_defaults', return_value={
