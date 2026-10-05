@@ -153,7 +153,7 @@ class Plugin(IntegrationPlugin):
 
     def create_settings(self, parent=None):
         from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QFormLayout, QLineEdit, QHBoxLayout
-        from PyQt6.QtCore import QUrl
+        from PyQt6.QtCore import QUrl, Qt
         from PyQt6.QtGui import QDesktopServices
         widget = QWidget(parent)
         layout = QVBoxLayout(widget)
@@ -186,6 +186,6 @@ class Plugin(IntegrationPlugin):
         layout.addWidget(hint)
         button = QPushButton('Open Lutris library folder')
         button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(LUTRIS))))
-        layout.addWidget(button)
+        layout.addWidget(button, 0, Qt.AlignmentFlag.AlignHCenter)
         layout.addStretch()
         return widget
