@@ -36,6 +36,11 @@ class Plugin(InstallationPlugin):
             if not relative.parts:
                 return
             name = relative.parts[0]
+            installation = str(Path(root).resolve() / name)
+            if widget.fields['InstallDirectory'].text() != installation:
+                from PyQt6.QtCore import QSignalBlocker
+                with QSignalBlocker(widget.fields['InstallDirectory']):
+                    widget.fields['InstallDirectory'].setText(installation)
             if name_field is not None and (not name_field.text().strip() or name_field.text() == widget.autofilled_name):
                 name_field.setText(name)
                 widget.autofilled_name = name
@@ -53,6 +58,7 @@ class Plugin(InstallationPlugin):
         widget.runner = QLineEdit(game.get('WineRunner') or 'GE-Proton')
         widget.layout().insertRow(3, 'Wine runner', widget.runner)
         widget.create_prefix = QCheckBox('Create prefix folder if it does not exist')
+        widget.create_prefix.setChecked(True)
         widget.layout().insertRow(4, '', widget.create_prefix)
         widget.fields['LutrisId'].setReadOnly(True)
         widget.fields['LutrisId'].setPlaceholderText('Assigned on save')
