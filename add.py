@@ -14,7 +14,7 @@ class Plugin(InstallationPlugin):
         plugins = discover_plugins()
         self.manual = ManualInstallation()
         self.lutris = plugins['LutrisIntegration']
-        widget = self.manual.create_editor(editor, game, directory_defaults=self.lutris.directory_defaults())
+        widget = self.manual.create_editor(editor, game, directory_defaults=self.lutris.directory_defaults(), extra_fields=[dict(key='LutrisId', label='Lutris game ID', positive_id=True)])
         defaults = self.lutris.directory_defaults()
         widget.autofilled_name = ''
         widget.autofilled_prefix = ''
@@ -143,11 +143,18 @@ class Plugin(InstallationPlugin):
 
     def configure_cli(self, parser):
         ManualInstallation().configure_cli(parser)
+        parser.add_argument('--steam-id', default='')
+        parser.add_argument('--lutris-id', default='')
         parser.add_argument('--runner', default='ge-proton')
         parser.add_argument('--create-prefix', action='store_true')
 
     def cli_game(self, args, plugins):
+        for value in (args.steam_id, args.lutris_id):
+            if value and (not value.isascii() or not value.isdigit() or int(value) < 1):
+                raise ValueError('Game IDs must be positive whole numbers.')
         game = ManualInstallation().cli_game(args, plugins)
+        game['LutrisId'] = args.lutris_id
+        game['MetadataIds'] = {'SteamMetadata': args.steam_id} if args.steam_id else {}
         if not game['Prefix'] or not game['Executable'] or not game['InstallDirectory']:
             raise ValueError('Provide --exe, --folder (or executable folder), and --prefix.')
         registration = plan(game['Executable'], game['Name'], installation_directory=game['InstallDirectory'], prefix=game['Prefix'])
@@ -156,6 +163,10 @@ class Plugin(InstallationPlugin):
         game['WineRunner'] = validate_runner(args.runner)
         game['InstallationMethod'] = self.id
         return game
+
+    def validate_cli_library(self, game, games):
+        if game.get('LutrisId') and any(str(entry.get('LutrisId')) == str(game['LutrisId']) for entry in games):
+            raise ValueError('This Lutris game is already in Playlite.')
 
     def cli_commit(self, args, game, plugins):
         registration = plan(game['Executable'], game['Name'], installation_directory=game['InstallDirectory'], prefix=game['Prefix'])

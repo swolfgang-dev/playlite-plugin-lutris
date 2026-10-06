@@ -11,7 +11,7 @@ class Plugin(InstallationPlugin):
     def create_editor(self, editor, game):
         plugins = discover_plugins()
         self.manual = ManualInstallation()
-        widget = self.manual.create_editor(editor, game)
+        widget = self.manual.create_editor(editor, game, extra_fields=[dict(key='LutrisId', label='Lutris game ID', positive_id=True)])
         button = QPushButton('Import from Lutris…')
         widget.import_button = button
         widget.layout().insertRow(0, '', button)

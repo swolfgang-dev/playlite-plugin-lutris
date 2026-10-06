@@ -8,7 +8,7 @@ import sqlite3
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, ANY
 from PyQt6.QtWidgets import QApplication
 from playlite.providers import discover_providers, discover_plugins, GameProvider, GenericPlugin
 from playlite.metadata_dialog import MetadataDownloader
@@ -31,7 +31,7 @@ class ProviderPluginTests(unittest.TestCase):
             with patch('playlite_plugins.lutrisintegration.runtime.FLATPAK', False), \
                  patch('shutil.which', return_value='/usr/bin/lutris'), patch('subprocess.Popen') as launch:
                 plugin.launch(games[0])
-                launch.assert_called_once_with(['/usr/bin/lutris', 'lutris:rungameid/42'], start_new_session=True)
+                launch.assert_called_once_with(['/usr/bin/lutris', 'lutris:rungameid/42'], start_new_session=True, env=ANY)
 
     def test_game_and_generic_plugins_are_separate_from_metadata(self):
         with TemporaryDirectory() as directory:

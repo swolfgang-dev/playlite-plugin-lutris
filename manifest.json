@@ -1,13 +1,16 @@
 {
   "id": "LutrisIntegration",
   "name": "Lutris Integration",
-  "version": "1.1.13",
+  "version": "1.1.14",
   "api_version": 1,
   "type": "integration",
   "repository": "swolfgang-dev/playlite-plugin-lutris-integration",
-  "minimum_playlite_version": "0.2.42",
+  "minimum_playlite_version": "0.2.44",
   "requirements": [
     "PyYAML>=6"
   ],
-  "description": "Import, register, launch, and detect Lutris games, with playtime tracking."
+  "description": "Import, register, launch, and detect Lutris games, with playtime tracking.",
+  "settings_groups": [
+    "Lutris"
+  ]
 }

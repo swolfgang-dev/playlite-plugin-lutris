@@ -183,11 +183,11 @@ class WorkflowTests(unittest.TestCase):
             dialog = AddGameEditor(None, Path(directory))
             dialog.fields['Name'].setText('Example')
             dialog.fields['Prefix'].setText('/prefixes/example')
-            dialog.fields['LutrisId'].setText('42')
+            self.assertNotIn('LutrisId', dialog.fields)
             dialog.fields['SteamId'].setText('12345')
             dialog.save()
             self.assertEqual(dialog.result_game['Prefix'], '/prefixes/example')
-            self.assertEqual(dialog.result_game['LutrisId'], '42')
+            self.assertNotIn('LutrisId', dialog.result_game)
             self.assertEqual(dialog.result_game['MetadataIds']['SteamMetadata'], '12345')
             register_game.assert_not_called()
 

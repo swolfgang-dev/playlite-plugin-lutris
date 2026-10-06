@@ -15,7 +15,7 @@ class Plugin(IntegrationPlugin):
 
     def validate_action(self, action):
         identity = action.get('GameId') or ''
-        if identity and (not identity.isascii() or not identity.isdigit() or int(identity) < 1):
+        if not identity or not identity.isascii() or not identity.isdigit() or int(identity) < 1:
             raise ValueError('Lutris play actions need a positive numeric game ID.')
 
     supports_entry_deletion = True
