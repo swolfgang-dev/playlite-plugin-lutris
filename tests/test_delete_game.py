@@ -1,10 +1,10 @@
 from plugin_test_support import require_plugin
-require_plugin('Lutris')
+require_plugin('LutrisIntegration')
 import sqlite3
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from playlite_plugins.lutris.registration import delete_lutris_entry
+from playlite_plugins.lutrisintegration.registration import delete_lutris_entry
 
 
 class DeleteGameTests(unittest.TestCase):

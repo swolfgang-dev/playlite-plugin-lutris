@@ -1,6 +1,6 @@
 from plugin_test_support import require_plugin, wait_for_runners
-require_plugin('IconStudio')
-require_plugin('Lutris')
+require_plugin('ImageStudio')
+require_plugin('LutrisIntegration')
 require_plugin('SteamAutoCrack')
 import json
 import sqlite3
@@ -12,8 +12,8 @@ from unittest.mock import patch
 from contextlib import closing
 from PyQt6.QtWidgets import QApplication, QTabWidget
 from playlite.editor import MetadataEditor, save_game
-from playlite_plugins.lutris.registration import plan, register
-from playlite_plugins.iconstudio.studio import IconStudio
+from playlite_plugins.lutrisintegration.registration import plan, register
+from playlite_plugins.imagestudio.studio import IconStudio
 from PyQt6.QtGui import QImage, QColor
 
 APP = QApplication.instance() or QApplication([])
@@ -109,7 +109,7 @@ class WorkflowTests(unittest.TestCase):
             exe = root / 'Example' / 'game.exe'
             exe.parent.mkdir()
             exe.touch()
-            with patch('playlite_plugins.lutris.registration.register') as register_game:
+            with patch('playlite_plugins.lutrisintegration.registration.register') as register_game:
                 dialog = AddGameEditor(exe, root / 'library')
                 self.assertFalse(dialog.autocrack.isChecked())
                 self.assertEqual(dialog.findChild(QTabWidget).currentIndex(), 0)
@@ -179,7 +179,7 @@ class WorkflowTests(unittest.TestCase):
 
     def test_manual_installation_ids_and_prefix_save_without_registration(self):
         from playlite.add_game import AddGameEditor
-        with tempfile.TemporaryDirectory() as directory, patch('playlite_plugins.lutris.registration.register') as register_game:
+        with tempfile.TemporaryDirectory() as directory, patch('playlite_plugins.lutrisintegration.registration.register') as register_game:
             dialog = AddGameEditor(None, Path(directory))
             dialog.fields['Name'].setText('Example')
             dialog.fields['Prefix'].setText('/prefixes/example')
@@ -188,7 +188,7 @@ class WorkflowTests(unittest.TestCase):
             dialog.save()
             self.assertEqual(dialog.result_game['Prefix'], '/prefixes/example')
             self.assertEqual(dialog.result_game['LutrisId'], '42')
-            self.assertEqual(dialog.result_game['MetadataIds']['Steam'], '12345')
+            self.assertEqual(dialog.result_game['MetadataIds']['SteamMetadata'], '12345')
             register_game.assert_not_called()
 
     def test_lutris_import_picker_fills_editor_before_save(self):
@@ -216,7 +216,7 @@ class WorkflowTests(unittest.TestCase):
             dialog.autocrack.setChecked(False)
             dialog.save()
             self.assertEqual(dialog.result_game['InstallationMethod'], 'LutrisImport')
-            self.assertEqual(dialog.result_game['GameProvider'], 'Lutris')
+            self.assertEqual(dialog.result_game['GameProvider'], 'LutrisIntegration')
             self.assertEqual(dialog.result_game['PlayActions'][0]['GameId'], '42')
             self.assertNotEqual(dialog.result_game['Id'], 'external')
 
@@ -245,6 +245,6 @@ class WorkflowTests(unittest.TestCase):
                 dialog.save()
                 register_game.assert_called_once()
                 self.assertEqual(register_game.call_args.args[2], '--windowed')
-                self.assertEqual(dialog.result_game['GameProvider'], 'Lutris')
+                self.assertEqual(dialog.result_game['GameProvider'], 'LutrisIntegration')
                 self.assertEqual(dialog.result_game['PlayActions'][0]['GameId'], '42')
                 self.assertEqual(dialog.result_game['InstallationMethod'], 'LutrisAdd')

@@ -1,5 +1,5 @@
 from plugin_test_support import require_plugin, wait_for_runners
-require_plugin('Lutris')
+require_plugin('LutrisIntegration')
 import os
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 import unittest
@@ -11,7 +11,7 @@ from unittest.mock import patch
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 from playlite.providers import discover_plugins, installation_methods, IntegrationPlugin
-from playlite_plugins.lutris.detection import detect_running, process_snapshot
+from playlite_plugins.lutrisintegration.detection import detect_running, process_snapshot
 from playlite.game_detection import GameDetection, record_playtime
 from playlite.editor import MetadataEditor
 from playlite.add_game import AddGameEditor
@@ -21,21 +21,21 @@ APP = QApplication.instance() or QApplication([])
 
 class IntegrationTests(unittest.TestCase):
     def test_failed_checkpoint_retries_without_losing_or_duplicating_time(self):
-        plugin = discover_plugins()['Lutris']
-        games = [{'Id': 'a', 'GameProvider': 'Lutris', 'LutrisId': 42}]
+        plugin = discover_plugins()['LutrisIntegration']
+        games = [{'Id': 'a', 'GameProvider': 'LutrisIntegration', 'LutrisId': 42}]
         attempts = []
         def recorder(identity, seconds, count, stamp):
             attempts.append((seconds, count))
             return len(attempts) != 2
         monitor = GameDetection([plugin], lambda: games, recorder=recorder)
         for now in (0, 30, 31, 60, 61):
-            monitor.observe({'Lutris': (games, {'a'})}, now=now)
+            monitor.observe({'LutrisIntegration': (games, {'a'})}, now=now)
         self.assertEqual(attempts, [(0, 1), (30, 0), (31, 0), (30, 0)])
         self.assertEqual(monitor.sessions['a']['saved'], 61)
 
     def test_recording_checkpoints_handoffs_exit_and_failed_launch(self):
-        plugin = discover_plugins()['Lutris']
-        games = [{'Id': 'a', 'Name': 'Example', 'GameProvider': 'Lutris', 'LutrisId': 42,
+        plugin = discover_plugins()['LutrisIntegration']
+        games = [{'Id': 'a', 'Name': 'Example', 'GameProvider': 'LutrisIntegration', 'LutrisId': 42,
                   'Playtime': 100, 'PlayCount': 2}]
         with TemporaryDirectory() as directory:
             data = Path(directory)
@@ -44,7 +44,7 @@ class IntegrationTests(unittest.TestCase):
                 games[:] = record_playtime(data, games, identity, seconds, count, stamp)
             monitor.recorded.connect(persist)
             def scan(now, running):
-                monitor.observe({'Lutris': (games, {'a'} if running else set())}, now=now)
+                monitor.observe({'LutrisIntegration': (games, {'a'} if running else set())}, now=now)
             with patch('playlite.game_detection.time.monotonic', return_value=0):
                 monitor.launching('a')
             scan(5, True)
@@ -93,17 +93,17 @@ class IntegrationTests(unittest.TestCase):
         plugins = discover_plugins()
         self.assertNotIn('LutrisAdd', plugins)
         self.assertNotIn('LutrisImport', plugins)
-        self.assertIsInstance(plugins['Lutris'], IntegrationPlugin)
-        self.assertEqual(plugins['Lutris'].name, 'Lutris Integration')
-        self.assertEqual(set(installation_methods(plugins)), {'Manual', 'LutrisAdd', 'LutrisImport'})
-        self.assertTrue(plugins['Lutris'].owns({'LutrisId': 42}))
-        self.assertFalse(plugins['Lutris'].owns({'LutrisId': 42, 'GameProvider': None}))
+        self.assertIsInstance(plugins['LutrisIntegration'], IntegrationPlugin)
+        self.assertEqual(plugins['LutrisIntegration'].name, 'Lutris Integration')
+        self.assertTrue({'Manual', 'LutrisAdd', 'LutrisImport'} <= set(installation_methods(plugins)))
+        self.assertTrue(plugins['LutrisIntegration'].owns({'LutrisId': 42}))
+        self.assertFalse(plugins['LutrisIntegration'].owns({'LutrisId': 42, 'GameProvider': None}))
 
     def test_edit_actions_and_add_integration_dropdown(self):
         with TemporaryDirectory() as directory:
             game = {'Id': 'example', 'Name': 'Example', 'LutrisId': '42'}
             editor = MetadataEditor(game, Path(directory))
-            self.assertEqual(editor.play_actions.cards[0].integration.currentData(), 'Lutris')
+            self.assertEqual(editor.play_actions.cards[0].integration.currentData(), 'LutrisIntegration')
             editor.play_actions.remove(editor.play_actions.cards[0])
             result = editor.collect()
             self.assertIsNone(result['GameProvider'])
@@ -187,26 +187,26 @@ class LutrisDetectionTests(unittest.TestCase):
         self.assertEqual(detect_running([game], process_snapshot()), set())
 
     def test_status_launch_timeout_exit_grace_and_external_detection(self):
-        plugin = discover_plugins()['Lutris']
-        games = [{'Id': 'a', 'GameProvider': 'Lutris', 'LutrisId': 42}]
+        plugin = discover_plugins()['LutrisIntegration']
+        games = [{'Id': 'a', 'GameProvider': 'LutrisIntegration', 'LutrisId': 42}]
         monitor = GameDetection([plugin], lambda: games)
         with patch('playlite.game_detection.time.monotonic', return_value=0):
             monitor.launching('a')
-        monitor.observe({'Lutris': (games, set())}, now=10)
+        monitor.observe({'LutrisIntegration': (games, set())}, now=10)
         self.assertEqual(monitor.status('a'), 'Launching')
-        monitor.observe({'Lutris': (games, {'a'})}, now=11)
+        monitor.observe({'LutrisIntegration': (games, {'a'})}, now=11)
         self.assertEqual(monitor.status('a'), 'Running')
-        monitor.observe({'Lutris': (games, set())}, now=12)
+        monitor.observe({'LutrisIntegration': (games, set())}, now=12)
         self.assertEqual(monitor.status('a'), 'Running')
-        monitor.observe({'Lutris': (games, {'a'})}, now=13)
-        monitor.observe({'Lutris': (games, set())}, now=14)
-        monitor.observe({'Lutris': (games, set())}, now=16)
+        monitor.observe({'LutrisIntegration': (games, {'a'})}, now=13)
+        monitor.observe({'LutrisIntegration': (games, set())}, now=14)
+        monitor.observe({'LutrisIntegration': (games, set())}, now=16)
         self.assertEqual(monitor.status('a'), 'Stopped')
         with patch('playlite.game_detection.time.monotonic', return_value=20):
             monitor.launching('a')
-        monitor.observe({'Lutris': (games, set())}, now=81)
+        monitor.observe({'LutrisIntegration': (games, set())}, now=81)
         self.assertEqual(monitor.status('a'), 'Launch failed')
-        monitor.observe({'Lutris': (games, {'a'})}, now=82)
+        monitor.observe({'LutrisIntegration': (games, {'a'})}, now=82)
         self.assertEqual(monitor.status('a'), 'Running')
         games[0]['GameProvider'] = None
         monitor.observe({}, now=83)

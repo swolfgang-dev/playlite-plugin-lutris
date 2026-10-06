@@ -24,7 +24,7 @@ class RunnerLoadingTests(unittest.TestCase):
         editor = QWidget()
         editor.fields = {}
         plugin = Plugin()
-        with patch('lutris_defaults_under_test.add.discover_plugins', return_value={'Lutris': plugin}):
+        with patch('lutris_defaults_under_test.add.discover_plugins', return_value={'LutrisIntegration': plugin}):
             widget = Add().create_editor(editor, {'WineRunner': 'saved-runner'})
         return editor, widget
 
@@ -96,3 +96,29 @@ class RunnerLoadingTests(unittest.TestCase):
         with patch.object(runtime, 'FLATPAK', True), patch.object(runtime.shutil, 'which', return_value='/bin/flatpak'):
             self.assertEqual(runtime.launch_command('lutris:rungameid/1'), ['/bin/flatpak', 'run', runtime.APP_ID, 'lutris:rungameid/1'])
             self.assertEqual(runtime.inventory_command('script'), ['/bin/flatpak', 'run', '--command=python3', runtime.APP_ID, '-c', 'script'])
+
+    def test_repo_profile_uses_host_lutris_and_environment(self):
+        with TemporaryDirectory() as folder:
+            home = Path(folder)
+            data = home / 'desktop-data'
+            (data / 'lutris').mkdir(parents=True)
+            (data / 'lutris/pga.db').touch()
+            private = str(home / 'private')
+            values = dict(PLAYLITE_PROFILE='repo', HOME=private,
+                          XDG_DATA_HOME=private + '/data', XDG_CONFIG_HOME=private + '/config',
+                          PLAYLITE_HOST_HOME=str(home), PLAYLITE_HOST_XDG_DATA_HOME=str(data),
+                          PLAYLITE_HOST_XDG_CONFIG_HOME='')
+            with patch.dict(runtime.os.environ, values, clear=True):
+                self.assertEqual(runtime.installation(), (data / 'lutris', False))
+                env = runtime.environment()
+                self.assertEqual(env['HOME'], str(home))
+                self.assertEqual(env['XDG_DATA_HOME'], str(data))
+                self.assertNotIn('XDG_CONFIG_HOME', env)
+                self.assertEqual(runtime.os.environ['HOME'], private)
+
+    def test_existing_repo_session_falls_back_to_desktop_home(self):
+        from types import SimpleNamespace
+        with patch.dict(runtime.os.environ, {'PLAYLITE_PROFILE': 'repo', 'HOME': '/private',
+                                            'XDG_DATA_HOME': '/private/data'}, clear=True), \
+                patch.object(runtime.pwd, 'getpwuid', return_value=SimpleNamespace(pw_dir='/desktop')):
+            self.assertEqual(runtime.installation(), (Path('/desktop/.local/share/lutris'), False))

@@ -4,14 +4,14 @@ Import, register, launch, and detect Lutris games, with playtime tracking.
 
 This repository contains only this plugin. Playlite itself lives in
 [swolfgang-dev/Playlite](https://github.com/swolfgang-dev/Playlite).
-Requires Playlite 0.2.11 or later, plugin API 1.
+Requires Playlite 0.2.41 or later, plugin API 1.
 
 ## Installation
 
 Install from the public GitHub release:
 
 ```sh
-playlite-plugins install swolfgang-dev/playlite-plugin-lutris
+playlite-plugins install swolfgang-dev/playlite-plugin-lutris-integration
 ```
 
 Or choose Settings → Plugins → Installed → Install / update from GitHub.

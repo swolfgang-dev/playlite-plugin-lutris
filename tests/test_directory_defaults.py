@@ -46,7 +46,7 @@ class DirectoryDefaultsTests(unittest.TestCase):
         editor.fields = {}
         method = Add()
         with patch.object(plugin, 'directory_defaults', return_value={}), \
-                patch('lutris_defaults_under_test.add.discover_plugins', return_value={'Lutris': plugin}), \
+                patch('lutris_defaults_under_test.add.discover_plugins', return_value={'LutrisIntegration': plugin}), \
                 patch('lutris_defaults_under_test.runner_loader.runner_choices', return_value=[('GE-Proton (Latest)', 'ge-proton')]):
             widget = method.create_editor(editor, {'WineRunner': 'missing-build',
                 'Executable': '/games/Example/game.exe', 'InstallDirectory': '/games/Example', 'Prefix': '/prefixes/Example'})
@@ -138,7 +138,7 @@ class DirectoryDefaultsTests(unittest.TestCase):
         editor.fields = {}
         with patch.object(plugin, 'directory_defaults', return_value={
                 'InstallDirectory': '/games', 'Prefix': '/prefixes'}), \
-                patch('lutris_defaults_under_test.add.discover_plugins', return_value={'Lutris': plugin}):
+                patch('lutris_defaults_under_test.add.discover_plugins', return_value={'LutrisIntegration': plugin}):
             widget = Add().create_editor(editor, {})
         with patch('playlite.manual_installation.choose_directory', return_value='') as choose:
             widget.findChild(QPushButton, 'browsePrefix').click()
@@ -153,7 +153,7 @@ class DirectoryDefaultsTests(unittest.TestCase):
         editor.fields = {'Name': QLineEdit()}
         with patch.object(plugin, 'directory_defaults', return_value={
                 'InstallDirectory': '/games', 'Prefix': '/prefixes'}), \
-                patch('lutris_defaults_under_test.add.discover_plugins', return_value={'Lutris': plugin}):
+                patch('lutris_defaults_under_test.add.discover_plugins', return_value={'LutrisIntegration': plugin}):
             widget = Add().create_editor(editor, {})
         widget.fields['Executable'].setText('/games/The Witcher 3/bin/x64/game.exe')
         self.assertEqual(widget.fields['InstallDirectory'].text(), '/games/The Witcher 3')
@@ -172,7 +172,7 @@ class DirectoryDefaultsTests(unittest.TestCase):
         self.assertEqual(editor.fields['Name'].text(), 'My custom title')
         self.assertEqual(widget.fields['Prefix'].text(), '/custom/prefix')
 
-    def test_autofill_requires_game_beneath_default_root(self):
+    def test_prefix_autofills_even_outside_default_installation_root(self):
         from lutris_defaults_under_test.add import Plugin as Add
         from PyQt6.QtWidgets import QLineEdit
         plugin = Plugin()
@@ -180,12 +180,16 @@ class DirectoryDefaultsTests(unittest.TestCase):
         editor.fields = {'Name': QLineEdit()}
         with patch.object(plugin, 'directory_defaults', return_value={
                 'InstallDirectory': '/games', 'Prefix': '/prefixes'}), \
-                patch('lutris_defaults_under_test.add.discover_plugins', return_value={'Lutris': plugin}):
+                patch('lutris_defaults_under_test.add.discover_plugins', return_value={'LutrisIntegration': plugin}):
             widget = Add().create_editor(editor, {})
-        for folder in ('/games', '/games-other/Example', '/other/Example'):
-            widget.fields['InstallDirectory'].setText(folder)
-            self.assertEqual(editor.fields['Name'].text(), '')
-            self.assertEqual(widget.fields['Prefix'].text(), '')
+        widget.fields['InstallDirectory'].setText('/games')
+        self.assertEqual(widget.fields['Prefix'].text(), '')
+        widget.fields['InstallDirectory'].clear()
+        widget.fields['Executable'].setText('/other/West of Loathing/West of Loathing.exe')
+        self.assertEqual(widget.fields['Prefix'].text(), '/prefixes/west-of-loathing')
+        widget.fields['Prefix'].setText('/custom/prefix')
+        widget.fields['Executable'].setText('/elsewhere/Example/game.exe')
+        self.assertEqual(widget.fields['Prefix'].text(), '/custom/prefix')
 
     def test_action_selectors_use_defaults(self):
         plugin = Plugin()
@@ -201,3 +205,52 @@ class DirectoryDefaultsTests(unittest.TestCase):
                 widget.fields['Prefix'].setText('/prefixes/example')
                 buttons[1].click()
                 self.assertEqual(choose.call_args.args[2], '/prefixes/example')
+
+    def test_library_override_save_validation_and_clear(self):
+        from lutris_defaults_under_test.runtime import library_path
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            settings = QSettings(str(root / 'settings.ini'), QSettings.Format.IniFormat)
+            library = root / 'library'
+            library.mkdir()
+            with patch('PyQt6.QtCore.QSettings', return_value=settings):
+                plugin = Plugin()
+                widget = plugin.create_settings()
+                field = widget.directory_fields['LibraryDirectory']
+                field.setText(str(library))
+                with self.assertRaisesRegex(ValueError, 'pga.db'):
+                    plugin.save_settings(widget)
+                (library / 'pga.db').touch()
+                plugin.save_settings(widget)
+                self.assertEqual(library_path(), library)
+                field.clear()
+                plugin.save_settings(widget)
+                self.assertEqual(library_path(root / 'automatic'), root / 'automatic')
+                widget.deleteLater()
+
+    def test_empty_installation_default_inherits_general_without_saving_override(self):
+        with tempfile.TemporaryDirectory() as folder:
+            local = QSettings(str(Path(folder) / 'lutris.ini'), QSettings.Format.IniFormat)
+            general = QSettings(str(Path(folder) / 'ui.ini'), QSettings.Format.IniFormat)
+            general.setValue('installation/defaultFolder', '/general/games')
+            general.setValue('installation/defaultPrefixFolder', '/general/prefixes')
+            def settings(*args):
+                return local if args[0] == 'Playlite' else general
+            with patch('PyQt6.QtCore.QSettings', side_effect=settings):
+                plugin = Plugin()
+                self.assertEqual(plugin.directory_defaults()['InstallDirectory'], '/general/games')
+                self.assertEqual(plugin.directory_defaults()['Prefix'], '/general/prefixes')
+                widget = plugin.create_settings()
+                self.assertEqual(widget.directory_fields['InstallDirectory'].text(), '')
+                self.assertEqual(widget.directory_fields['InstallDirectory'].placeholderText(), '/general/games (automatic)')
+                plugin.save_settings(widget)
+                self.assertEqual(local.value('InstallDirectory'), '')
+                self.assertEqual(local.value('Prefix'), '')
+                self.assertEqual(widget.directory_fields['Prefix'].placeholderText(), '/general/prefixes (automatic)')
+                general.setValue('installation/defaultFolder', '/changed/games')
+                self.assertEqual(plugin.directory_defaults()['InstallDirectory'], '/changed/games')
+                local.setValue('Prefix', '/lutris/prefixes')
+                self.assertEqual(plugin.directory_defaults()['Prefix'], '/lutris/prefixes')
+                local.setValue('InstallDirectory', '/lutris/games')
+                self.assertEqual(plugin.directory_defaults()['InstallDirectory'], '/lutris/games')
+                widget.deleteLater()

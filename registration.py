@@ -14,7 +14,7 @@ import yaml
 
 ROOT = Path.home() / 'Games'
 PREFIXES = Path(os.environ.get('XDG_DATA_HOME', str(Path.home() / '.local/share'))) / 'playlite/prefixes'
-from .runtime import LUTRIS
+from .runtime import LUTRIS, library_path
 STATE = Path.home() / '.local/state/playlite'
 
 
@@ -64,7 +64,8 @@ def plan(executable, name='', root=ROOT, prefixes=PREFIXES, installation_directo
     return Plan(name, exe, directory, prefix_path, slug)
 
 
-def existing_locations(executable, lutris=LUTRIS):
+def existing_locations(executable, lutris=None):
+    lutris = lutris if lutris is not None else library_path(LUTRIS)
     database = lutris / 'pga.db'
     if not database.is_file():
         return None
@@ -85,7 +86,8 @@ def normalize_runner(runner):
     return 'ge-proton' if runner.casefold() in ('ge-proton', 'ge-proton (latest)') else runner
 
 
-def register(p, runner='ge-proton', lutris=LUTRIS, state=STATE, arguments=''):
+def register(p, runner='ge-proton', lutris=None, state=STATE, arguments=''):
+    lutris = lutris if lutris is not None else library_path(LUTRIS)
     if not runner.strip() or any(ord(c) < 32 for c in runner):
         raise ValueError('Choose a Wine runner.')
     runner = normalize_runner(runner)
@@ -179,7 +181,8 @@ def register(p, runner='ge-proton', lutris=LUTRIS, state=STATE, arguments=''):
                 raise
 
 
-def delete_lutris_entry(game_id, lutris=LUTRIS, state=STATE):
+def delete_lutris_entry(game_id, lutris=None, state=STATE):
+    lutris = lutris if lutris is not None else library_path(LUTRIS)
     """Remove a launcher entry, retaining the game's files and Wine prefix."""
     database = lutris / 'pga.db'
     if not database.is_file():

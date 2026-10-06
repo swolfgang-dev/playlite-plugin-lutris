@@ -3,7 +3,7 @@ import json
 import shutil
 import subprocess
 from .registration import LUTRIS, normalize_runner
-from .runtime import inventory_command
+from .runtime import inventory_command, environment, library_path
 
 
 def runner_choices():
@@ -12,14 +12,14 @@ def runner_choices():
               'print(json.dumps(get_installed_wine_versions()))')
     try:
         command = inventory_command(script)
-        result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=10)
+        result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=10, env=environment())
         versions = json.loads(result.stdout)
         if not isinstance(versions, list) or not all(isinstance(item, str) for item in versions):
             raise ValueError('Invalid Lutris runner inventory.')
     except (OSError, ValueError, subprocess.SubprocessError):
         # Native installations without importable Python modules can still use
         # Lutris-managed Wine builds and the standard GE-Proton sentinel.
-        versions = [path.name for path in (LUTRIS / 'runners/wine').glob('*')
+        versions = [path.name for path in (library_path(LUTRIS) / 'runners/wine').glob('*')
                     if (path / 'bin/wine').is_file()]
         if shutil.which('wine'):
             versions.append('system')

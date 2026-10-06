@@ -6,7 +6,7 @@ from pathlib import Path
 from contextlib import closing
 from playlite.providers import IntegrationPlugin
 from .registration import LUTRIS, register
-from .runtime import launch_command
+from .runtime import launch_command, environment, library_path, library_override
 
 
 class Plugin(IntegrationPlugin):
@@ -37,7 +37,7 @@ class Plugin(IntegrationPlugin):
     def restore_deleted_entry(self, backups):
         from contextlib import closing
         for backup in reversed(backups):
-            with closing(sqlite3.connect(backup)) as source, closing(sqlite3.connect(LUTRIS / 'pga.db')) as destination:
+            with closing(sqlite3.connect(backup)) as source, closing(sqlite3.connect(library_path(LUTRIS) / 'pga.db')) as destination:
                 source.backup(destination)
 
     def installation_methods(self):
@@ -89,13 +89,13 @@ class Plugin(IntegrationPlugin):
     def launch(self, game):
         if not str(game.get('LutrisId') or '').isascii() or not str(game.get('LutrisId') or '').isdigit():
             raise ValueError('Set a valid Lutris game ID on the Installation page.')
-        return subprocess.Popen(launch_command(f'lutris:rungameid/{game["LutrisId"]}'), start_new_session=True)
+        return subprocess.Popen(launch_command(f'lutris:rungameid/{game["LutrisId"]}'), start_new_session=True, env=environment())
 
     def register(self, registration, runner, arguments=''):
         return register(registration, runner=runner, arguments=arguments)
 
     def import_games(self):
-        database = LUTRIS / 'pga.db'
+        database = library_path(LUTRIS) / 'pga.db'
         if not database.is_file():
             raise ValueError('Lutris database not found. Open Lutris once first.')
         with closing(sqlite3.connect(f'{database.as_uri()}?mode=ro', uri=True)) as db:
@@ -107,7 +107,7 @@ class Plugin(IntegrationPlugin):
             config = {}
             config_name = row.get('configpath')
             if config_name and '/' not in config_name and '\\' not in config_name:
-                config_file = LUTRIS / 'games' / (config_name + '.yml')
+                config_file = library_path(LUTRIS) / 'games' / (config_name + '.yml')
                 if config_file.is_file():
                     import yaml
                     config = (yaml.safe_load(config_file.read_text()) or {}).get('game', {}) or {}
@@ -125,11 +125,19 @@ class Plugin(IntegrationPlugin):
                           'IsInstalled': bool(row.get('installed'))})
         return games
 
-    def directory_defaults(self):
+    def directory_defaults(self, *, inherit=True):
         from PyQt6.QtCore import QSettings
         settings = QSettings('Playlite', 'Lutris')
-        return {key: settings.value(key, '', type=str)
-                for key in ('InstallDirectory', 'Prefix')}
+        values = {key: settings.value(key, '', type=str)
+                  for key in ('InstallDirectory', 'Prefix')}
+        if inherit:
+            import os
+            data = Path(os.environ.get('XDG_DATA_HOME', str(Path.home() / '.local/share'))) / 'playlite'
+            general = QSettings(str(data / 'ui.ini'), QSettings.Format.IniFormat)
+            for key, setting in [('InstallDirectory', 'defaultFolder'), ('Prefix', 'defaultPrefixFolder')]:
+                if not values[key]:
+                    values[key] = general.value('installation/' + setting, '', type=str)
+        return values
 
     def create_action_editor(self, action, parent=None):
         from playlite.play_actions import LaunchSettings
@@ -143,6 +151,9 @@ class Plugin(IntegrationPlugin):
                 raise ValueError('Default folder paths must be absolute Linux paths.')
             if value and Path(value).exists() and not Path(value).is_dir():
                 raise ValueError('Default folder paths must point to directories.')
+        library = values.get('LibraryDirectory', '')
+        if library and not (Path(library) / 'pga.db').is_file():
+            raise ValueError('Choose the Lutris library folder containing pga.db.')
         settings = QSettings('Playlite', 'Lutris')
         for key, value in values.items():
             settings.setValue(key, value)
@@ -160,11 +171,14 @@ class Plugin(IntegrationPlugin):
         from playlite.lifecycle import choose_directory
         form = QFormLayout()
         widget.directory_fields = {}
-        defaults = self.directory_defaults()
-        for key, title in [('InstallDirectory', 'Default installation parent folder'),
+        defaults = dict(self.directory_defaults(inherit=False), LibraryDirectory=library_override())
+        effective_defaults = self.directory_defaults()
+        for key, title in [('LibraryDirectory', 'Lutris library folder'),
+                           ('InstallDirectory', 'Default installation parent folder'),
                            ('Prefix', 'Default Wine prefix parent folder')]:
             field = QLineEdit(defaults[key])
-            field.setPlaceholderText('No default folder')
+            automatic = str(library_path(LUTRIS)) if key == 'LibraryDirectory' else effective_defaults.get(key, '')
+            field.setPlaceholderText(automatic + ' (automatic)' if automatic else 'No default folder configured (automatic)')
             field.setObjectName('default' + key)
             widget.directory_fields[key] = field
             row = QHBoxLayout()
@@ -178,11 +192,11 @@ class Plugin(IntegrationPlugin):
             row.addWidget(browse)
             form.addRow(title, row)
         layout.addLayout(form)
-        hint = QLabel('Empty fields browse from these defaults; filled fields browse from their own paths. Choose the containing folders for your installations and Wine prefixes.')
+        hint = QLabel('Leave the library folder empty for automatic detection, or choose the folder containing pga.db. Empty fields browse from these defaults; filled fields browse from their own paths. Empty installation and Wine prefix parent folders use the General defaults automatically.')
         hint.setWordWrap(True)
         layout.addWidget(hint)
         button = QPushButton('Open Lutris library folder')
-        button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(LUTRIS))))
+        button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(library_path(LUTRIS)))))
         layout.addWidget(button, 0, Qt.AlignmentFlag.AlignHCenter)
         layout.addStretch()
         return widget

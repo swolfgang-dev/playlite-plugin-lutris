@@ -16,7 +16,7 @@ class Plugin(InstallationPlugin):
         widget.import_button = button
         widget.layout().insertRow(0, '', button)
         widget.editor = editor
-        button.clicked.connect(lambda: self.choose_game(widget, plugins['Lutris']))
+        button.clicked.connect(lambda: self.choose_game(widget, plugins['LutrisIntegration']))
         return widget
 
     def choose_game(self, widget, provider):
@@ -63,7 +63,7 @@ class Plugin(InstallationPlugin):
                 return
             selected = item.data(Qt.ItemDataRole.UserRole)
             editor.apply_metadata({key: value for key, value in selected.items() if key != 'Id'})
-            editor.game['GameProvider'] = 'Lutris'
+            editor.game['GameProvider'] = 'LutrisIntegration'
             editor.flags['IsInstalled'].setChecked(selected.get('IsInstalled', False))
         except Exception as error:
             show_warning(editor, 'Cannot import from Lutris', str(error))
@@ -73,7 +73,7 @@ class Plugin(InstallationPlugin):
         if not game.get('LutrisId'):
             raise ValueError('Select a Lutris game first.')
         game['InstallationMethod'] = self.id
-        game['GameProvider'] = 'Lutris'
+        game['GameProvider'] = 'LutrisIntegration'
         return game
 
     cli_name = 'import-lutris'
@@ -82,7 +82,7 @@ class Plugin(InstallationPlugin):
         parser.add_argument('--lutris-id', type=int, required=True)
 
     def cli_game(self, args, plugins):
-        game = next((game for game in plugins['Lutris'].import_games() if game['LutrisId'] == args.lutris_id), None)
+        game = next((game for game in plugins['LutrisIntegration'].import_games() if game['LutrisId'] == args.lutris_id), None)
         if game is None:
             raise ValueError('Lutris game ID not found.')
         game['InstallationMethod'] = self.id

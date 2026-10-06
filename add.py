@@ -13,7 +13,7 @@ class Plugin(InstallationPlugin):
     def create_editor(self, editor, game):
         plugins = discover_plugins()
         self.manual = ManualInstallation()
-        self.lutris = plugins['Lutris']
+        self.lutris = plugins['LutrisIntegration']
         widget = self.manual.create_editor(editor, game, directory_defaults=self.lutris.directory_defaults())
         defaults = self.lutris.directory_defaults()
         widget.autofilled_name = ''
@@ -28,16 +28,16 @@ class Plugin(InstallationPlugin):
         def autofill(*unused):
             root = defaults.get('InstallDirectory', '')
             selected = widget.fields['InstallDirectory'].text().strip()
-            if not root or not selected:
+            if not selected:
                 return
             try:
-                relative = Path(selected).resolve().relative_to(Path(root).resolve())
+                relative = Path(selected).resolve().relative_to(Path(root).resolve()) if root else None
             except (ValueError, OSError):
+                relative = None
+            if relative is not None and not relative.parts:
                 return
-            if not relative.parts:
-                return
-            name = relative.parts[0]
-            installation = str(Path(root).resolve() / name)
+            name = relative.parts[0] if relative is not None else Path(selected).name
+            installation = str(Path(root).resolve() / name) if relative is not None else selected
             if widget.fields['InstallDirectory'].text() != installation:
                 from PyQt6.QtCore import QSignalBlocker
                 with QSignalBlocker(widget.fields['InstallDirectory']):
@@ -55,6 +55,7 @@ class Plugin(InstallationPlugin):
                 prefix_field.setText(prefix)
                 widget.autofilled_prefix = prefix
         widget.fields['InstallDirectory'].textChanged.connect(autofill)
+        widget.fields['Executable'].textChanged.connect(autofill)
         autofill()
         widget.runner = QComboBox()
         widget.runner.setObjectName('WineRunner')
@@ -134,7 +135,7 @@ class Plugin(InstallationPlugin):
 
     def commit(self, widget, game):
         result = self.lutris.register(widget.registration, game['WineRunner'], game.get('LaunchArguments', ''))
-        game.update(GameProvider='Lutris', LutrisId=result['id'], Prefix=result['prefix'])
+        game.update(GameProvider='LutrisIntegration', LutrisId=result['id'], Prefix=result['prefix'])
         widget.fields['LutrisId'].setText(str(result['id']))
         return game
 
@@ -158,6 +159,6 @@ class Plugin(InstallationPlugin):
 
     def cli_commit(self, args, game, plugins):
         registration = plan(game['Executable'], game['Name'], installation_directory=game['InstallDirectory'], prefix=game['Prefix'])
-        result = plugins['Lutris'].register(registration, args.runner, args.arguments)
-        game.update(GameProvider='Lutris', LutrisId=result['id'], Prefix=result['prefix'])
+        result = plugins['LutrisIntegration'].register(registration, args.runner, args.arguments)
+        game.update(GameProvider='LutrisIntegration', LutrisId=result['id'], Prefix=result['prefix'])
         return game
