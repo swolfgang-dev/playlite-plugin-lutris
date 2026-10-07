@@ -77,6 +77,29 @@ class Plugin(IntegrationPlugin):
             resolved.append(values)
         return detect_running(resolved, process_snapshot())
 
+    def stop(self, game):
+        from playlite.play_actions import actions_for, action_game
+        from playlite.process_control import terminate_processes
+        from .detection import process_snapshot, matches
+        configs = {str(entry['LutrisId']): entry for entry in self.import_games()}
+        resolved = []
+        for action in actions_for(game, [self]):
+            if action.get('Integration') != self.id:
+                continue
+            values = action_game(game, action, self)
+            imported = configs.get(str(values.get('LutrisId')), {})
+            for key in ('Executable', 'InstallDirectory', 'Prefix'):
+                values[key] = values.get(key) or imported.get(key)
+            resolved.append(values)
+        sessions = {}
+        for record in process_snapshot():
+            sessions.setdefault(record['session'], []).append(record)
+        clients = {'steam', 'steamwebhelper', 'steamservice', 'lutris', 'wineserver',
+                   'services.exe', 'winedevice.exe', 'explorer.exe', 'rpcss.exe'}
+        return terminate_processes(record for records in sessions.values()
+                                   if any(matches(values, records) for values in resolved)
+                                   for record in records if Path(record['exe']).name.casefold() not in clients)
+
     def association_id(self, game):
         return game.get('LutrisId')
     def owns(self, game):
