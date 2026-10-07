@@ -39,7 +39,7 @@ def create_variant(source_id,name,identity,environment=None,dll_overrides=None,l
             if not executable.is_absolute():raise ValueError('The source executable must use an absolute path.')
             game['working_dir']=str(executable.parent)
             config.setdefault('system',{}).setdefault('env',{}).update(environment or {})
-            config.setdefault('wine',{}).setdefault('dll_overrides',{}).update(dll_overrides or {})
+            config.setdefault('wine',{}).setdefault('overrides',{}).update(dll_overrides or {})
             slug=(re.sub(r'[^a-z0-9]+','-',name.lower()).strip('-') or 'modded')+'-'+uuid.uuid4().hex[:8]
             config_name=slug+'-playlite'
             target=root/'games'/(config_name+'.yml')

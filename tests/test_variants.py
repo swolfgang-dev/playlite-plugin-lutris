@@ -18,7 +18,7 @@ class VariantTests(unittest.TestCase):
     def test_variant_preserves_original_and_is_idempotent(self):
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary);lutris=root/'lutris';(lutris/'games').mkdir(parents=True)
-            config={'game':{'exe':'/games/Example/bin/game.exe','prefix':'/prefix/example','args':'--keep'},'wine':{'version':'ge-proton','dll_overrides':{'other':'n'}},'system':{'env':{'KEEP':'yes'},'gamemode':True}}
+            config={'game':{'exe':'/games/Example/bin/game.exe','prefix':'/prefix/example','args':'--keep'},'wine':{'version':'ge-proton','overrides':{'other':'n'}},'system':{'env':{'KEEP':'yes'},'gamemode':True}}
             source=lutris/'games/original.yml';source.write_text(yaml.safe_dump(config));original=source.read_bytes()
             with closing(sqlite3.connect(lutris/'pga.db')) as db, db:
                 db.execute('CREATE TABLE games(id INTEGER PRIMARY KEY,name,sortname,slug,runner,executable,directory,installed,configpath,playtime)')
@@ -32,7 +32,7 @@ class VariantTests(unittest.TestCase):
             self.assertEqual(new['game']['working_dir'],'/games/Example/bin')
             self.assertEqual(new['game']['prefix'],'/prefix/example');self.assertEqual(new['game']['args'],'--keep')
             self.assertEqual(new['wine']['version'],'ge-proton')
-            self.assertEqual(new['wine']['dll_overrides'],{'other':'n','winhttp':'n,b'})
+            self.assertEqual(new['wine']['overrides'],{'other':'n','winhttp':'n,b'})
             self.assertEqual(new['system']['env']['KEEP'],'yes')
             self.assertEqual(new['system']['env']['WINEDLLOVERRIDES'],'winhttp=n,b')
             with closing(sqlite3.connect(lutris/'pga.db')) as db, db:self.assertEqual(db.execute('SELECT COUNT(*) FROM games').fetchone()[0],2)
