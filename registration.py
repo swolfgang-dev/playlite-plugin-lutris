@@ -64,6 +64,16 @@ def plan(executable, name='', root=ROOT, prefixes=PREFIXES, installation_directo
     return Plan(name, exe, directory, prefix_path, slug)
 
 
+def is_variant(lutris, configpath):
+    if not configpath:
+        return False
+    path = lutris / 'games' / (configpath + '.yml')
+    if path.is_symlink() or path.resolve().parent != (lutris / 'games').resolve() or not path.is_file():
+        return False
+    saved = yaml.safe_load(path.read_text()) or {}
+    return bool(saved.get('playlite_variant'))
+
+
 def existing_locations(executable, lutris=None):
     lutris = lutris if lutris is not None else library_path(LUTRIS)
     database = lutris / 'pga.db'
@@ -72,6 +82,7 @@ def existing_locations(executable, lutris=None):
     with closing(sqlite3.connect(database.as_uri() + '?mode=ro', uri=True)) as db:
         rows = db.execute('SELECT directory, configpath FROM games WHERE executable = ?',
                           (str(Path(executable).resolve()),)).fetchall()
+    rows = [row for row in rows if not is_variant(lutris, row[1])]
     if len(rows) != 1 or not rows[0][1]:
         return None
     config = lutris / 'games' / (rows[0][1] + '.yml')
@@ -101,6 +112,7 @@ def register(p, runner='ge-proton', lutris=None, state=STATE, arguments=''):
             db.row_factory = sqlite3.Row
             db.execute('BEGIN IMMEDIATE')
             matches = db.execute('SELECT * FROM games WHERE executable = ?', (str(p.exe),)).fetchall()
+            matches = [row for row in matches if not is_variant(lutris, row['configpath'])]
             if len(matches) > 1:
                 raise ValueError('Multiple Lutris entries use this executable. Resolve them in Lutris first.')
             existing = matches[0] if matches else None

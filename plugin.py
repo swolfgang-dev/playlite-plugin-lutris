@@ -91,6 +91,15 @@ class Plugin(IntegrationPlugin):
             raise ValueError('Set a valid Lutris game ID on the Installation page.')
         return subprocess.Popen(launch_command(f'lutris:rungameid/{game["LutrisId"]}'), start_new_session=True, env=environment())
 
+    def launch_configuration(self,source_id):
+        from .variants import launch_configuration
+        return launch_configuration(source_id)
+
+    def create_variant(self,source_id,name,identity,environment=None,dll_overrides=None):
+        """Create a separate entry preserving the source runner and prefix."""
+        from .variants import create_variant
+        return create_variant(source_id,name,identity,environment,dll_overrides)
+
     def register(self, registration, runner, arguments=''):
         return register(registration, runner=runner, arguments=arguments)
 
