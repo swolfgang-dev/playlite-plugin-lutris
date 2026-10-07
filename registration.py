@@ -126,14 +126,14 @@ def register(p, runner='ge-proton', lutris=None, state=STATE, arguments=''):
                     actual_prefix = str(p.prefix)
                     if (saved.get('game', {}).get('prefix') != actual_prefix or
                             existing['directory'] != str(p.directory) or
-                            saved.get('game', {}).get('working_dir') != str(p.directory) or
+                            saved.get('game', {}).get('working_dir') != str(p.exe.parent) or
                             saved.get('game', {}).get('args', '') != arguments or
                             saved.get('wine', {}).get('version') != runner):
                         original_config = config_file.read_bytes()
                         (state / (backup.stem + '.yml')).write_bytes(original_config)
                         config = config_file
                         saved.setdefault('game', {})['prefix'] = actual_prefix
-                        saved['game']['working_dir'] = str(p.directory)
+                        saved['game']['working_dir'] = str(p.exe.parent)
                         saved['game']['args'] = arguments
                         saved.setdefault('wine', {})['version'] = runner
                         temp_config = config.with_suffix('.yml.tmp')
@@ -155,7 +155,7 @@ def register(p, runner='ge-proton', lutris=None, state=STATE, arguments=''):
                         prefix_created = True
                     actual_prefix = str(p.prefix)
                     with config.open('x') as stream:
-                        yaml.safe_dump({'game': {'exe': str(p.exe), 'working_dir': str(p.directory),
+                        yaml.safe_dump({'game': {'exe': str(p.exe), 'working_dir': str(p.exe.parent),
                                                 'prefix': str(p.prefix), 'args': arguments},
                                         'wine': {'version': runner}, 'system': {'gamemode': False}}, stream)
                     game_id = db.execute('''INSERT INTO games

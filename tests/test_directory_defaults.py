@@ -81,22 +81,25 @@ class DirectoryDefaultsTests(unittest.TestCase):
         self.assertEqual(normalize_runner('GE-Proton9-27'), 'GE-Proton9-27')
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            executable = root / 'Example/game.exe'
-            executable.parent.mkdir()
+            executable = root / 'Example/bin/game.exe'
+            executable.parent.mkdir(parents=True)
             executable.touch()
             lutris = root / 'lutris'
             lutris.mkdir()
             with sqlite3.connect(lutris / 'pga.db') as database:
                 database.execute('CREATE TABLE games (id INTEGER PRIMARY KEY, name, sortname, slug, platform, runner, executable, directory, installed, installed_at, configpath, playtime, service)')
-            registration = plan(executable, installation_directory=executable.parent, prefix=root / 'prefix')
+            registration = plan(executable, installation_directory=root / 'Example', prefix=root / 'prefix')
             register(registration, runner='GE-Proton', lutris=lutris, state=root / 'state')
             config = next((lutris / 'games').glob('*.yml'))
             self.assertEqual(yaml.safe_load(config.read_text())['wine']['version'], 'ge-proton')
             saved = yaml.safe_load(config.read_text())
+            self.assertEqual(saved['game']['working_dir'],str(executable.parent))
+            saved['game']['working_dir']=str(root/'Example')
             saved['wine']['version'] = 'GE-Proton'
             config.write_text(yaml.safe_dump(saved))
             result = register(registration, lutris=lutris, state=root / 'state')
             self.assertTrue(result['reused'])
+            self.assertEqual(yaml.safe_load(config.read_text())['game']['working_dir'],str(executable.parent))
             self.assertEqual(yaml.safe_load(config.read_text())['wine']['version'], 'ge-proton')
 
     def test_settings_save_reopen_and_validate(self):
