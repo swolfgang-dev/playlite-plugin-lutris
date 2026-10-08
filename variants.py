@@ -40,7 +40,7 @@ def create_variant(source_id,name,identity,environment=None,dll_overrides=None,l
             game['working_dir']=str(executable.parent)
             config.setdefault('system',{}).setdefault('env',{}).update(environment or {})
             config.setdefault('wine',{}).setdefault('overrides',{}).update(dll_overrides or {})
-            slug=(re.sub(r'[^a-z0-9]+','-',name.lower()).strip('-') or 'modded')+'-'+uuid.uuid4().hex[:8]
+            slug=(re.sub(r'[^a-z0-9]+','-',re.sub("['’]", '', name).lower()).strip('-') or 'modded')+'-'+uuid.uuid4().hex[:8]
             config_name=slug+'-playlite'
             target=root/'games'/(config_name+'.yml')
             backup=state/('lutris-before-variant-'+uuid.uuid4().hex+'.db')

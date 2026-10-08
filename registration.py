@@ -55,7 +55,7 @@ def plan(executable, name='', root=ROOT, prefixes=PREFIXES, installation_directo
     name = name.strip() or directory.name
     if any(ord(c) < 32 for c in name):
         raise ValueError('Game names cannot contain control characters.')
-    slug = re.sub(r'[^a-z0-9]+', '-', directory.name.lower()).strip('-') or 'game'
+    slug = re.sub(r'[^a-z0-9]+', '-', re.sub("['’]", '', directory.name).lower()).strip('-') or 'game'
     prefix_path = Path(prefix).expanduser() if prefix else prefixes / slug
     if not prefix_path.is_absolute():
         raise ValueError('Prefix location must be an absolute path.')

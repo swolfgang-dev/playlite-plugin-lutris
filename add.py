@@ -46,7 +46,7 @@ class Plugin(InstallationPlugin):
                 name_field.setText(name)
                 widget.autofilled_name = name
             prefix_root = defaults.get('Prefix', '')
-            words = re.sub(r'([a-z0-9])([A-Z])', r'\1-\2', name)
+            words = re.sub(r'([a-z0-9])([A-Z])', r'\1-\2', re.sub("['’]", '', name))
             words = re.sub(r'([A-Z])([A-Z][a-z])', r'\1-\2', words)
             slug = re.sub(r'[^\w]+', '-', words.casefold().replace('_', '-')).strip('-')
             prefix_field = widget.fields['Prefix']
