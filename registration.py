@@ -18,6 +18,20 @@ from .runtime import LUTRIS, library_path
 STATE = Path.home() / '.local/state/playlite'
 
 
+
+def steam_game_id(db, steam_id, start=1):
+    """Allocate a Steam app ID followed by a two-digit entry number."""
+    value = str(steam_id)
+    if not value.isascii() or not value.isdigit() or not 0 < int(value) <= (2**63 - 100) // 100:
+        raise ValueError('Steam app ID cannot be encoded as a Lutris ID.')
+    base = int(value) * 100
+    for suffix in range(start, 100):
+        identity = base + suffix
+        if db.execute('SELECT 1 FROM games WHERE id = ?', (identity,)).fetchone() is None:
+            return identity
+    raise ValueError(f'All Lutris entry numbers for Steam app {value} are in use.')
+
+
 def atomic_json(path, data):
     temporary = path.with_name(path.name + '.' + uuid.uuid4().hex + '.tmp')
     try:
@@ -97,7 +111,7 @@ def normalize_runner(runner):
     return 'ge-proton' if runner.casefold() in ('ge-proton', 'ge-proton (latest)') else runner
 
 
-def register(p, runner='ge-proton', lutris=None, state=STATE, arguments=''):
+def register(p, runner='ge-proton', lutris=None, state=STATE, arguments='', steam_id=None):
     lutris = lutris if lutris is not None else library_path(LUTRIS)
     if not runner.strip() or any(ord(c) < 32 for c in runner):
         raise ValueError('Choose a Wine runner.')
@@ -157,6 +171,7 @@ def register(p, runner='ge-proton', lutris=None, state=STATE, arguments=''):
                                            (str(p.directory), p.slug)).fetchall()
                     if conflicts:
                         raise ValueError('This game folder or slug already has a Lutris entry. Select its registered executable or edit it in Lutris.')
+                    game_id = steam_game_id(db, steam_id) if steam_id not in (None, '') else None
                     config_name = p.slug + '-standalone-manager-' + uuid.uuid4().hex[:8]
                     config = lutris / 'games' / (config_name + '.yml')
                     config.parent.mkdir(parents=True, exist_ok=True)
@@ -169,11 +184,12 @@ def register(p, runner='ge-proton', lutris=None, state=STATE, arguments=''):
                     with config.open('x') as stream:
                         yaml.safe_dump({'game': {'exe': str(p.exe), 'working_dir': str(p.exe.parent),
                                                 'prefix': str(p.prefix), 'args': arguments},
-                                        'wine': {'version': runner}, 'system': {'gamemode': False}}, stream)
+                                        'wine': {'version': runner}, 'system': {'gamemode': False},
+                                        **({'playlite_steam_id': int(steam_id)} if steam_id not in (None, '') else {})}, stream)
                     game_id = db.execute('''INSERT INTO games
-                        (name,sortname,slug,platform,runner,executable,directory,installed,installed_at,configpath,playtime,service)
-                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
-                        (p.name,p.name,p.slug,'Windows','wine',str(p.exe),str(p.directory),1,int(time.time()),config_name,0,'manual')).lastrowid
+                        (id,name,sortname,slug,platform,runner,executable,directory,installed,installed_at,configpath,playtime,service)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                        (game_id,p.name,p.name,p.slug,'Windows','wine',str(p.exe),str(p.directory),1,int(time.time()),config_name,0,'manual')).lastrowid
                 db.commit()
                 return {'id': game_id, 'reused': bool(existing), 'prefix': actual_prefix,
                         'link': 'lutris:rungameid/' + str(game_id)}

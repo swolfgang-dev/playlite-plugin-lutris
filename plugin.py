@@ -123,8 +123,8 @@ class Plugin(IntegrationPlugin):
         from .variants import create_variant
         return create_variant(source_id,name,identity,environment,dll_overrides)
 
-    def register(self, registration, runner, arguments=''):
-        return register(registration, runner=runner, arguments=arguments)
+    def register(self, registration, runner, arguments='', steam_id=None):
+        return register(registration, runner=runner, arguments=arguments, steam_id=steam_id)
 
     def import_games(self):
         database = library_path(LUTRIS) / 'pga.db'

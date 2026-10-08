@@ -63,3 +63,5 @@ plugin; its separate tool installer downloads/builds them when requested.
 Packages are published directly as GitHub releases in this source repository. Tag the manifest version (for example, `v1.1.10`) to build and publish `plugin.zip` and its checksums automatically.
 
 Runner choices load in the background. Refresh updates the installed runner list without reopening the editor. Saving waits for discovery and validates the displayed inventory. Native Lutris uses `$XDG_DATA_HOME/lutris`; a Flatpak database is selected automatically when no native database exists. Import, registration, runner discovery, and launch use that same installation. Native takes precedence if both databases exist.
+
+New Lutris entries with a Steam app ID use that ID followed by a two-digit entry number: `12345601` for the base entry, then `12345602`, `12345603`, and so on for subsequent entries and variants. Occupied IDs are skipped, with up to 99 entries per Steam app. Without a Steam app ID, Lutris assigns automatic IDs. Existing entries keep their IDs.

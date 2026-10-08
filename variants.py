@@ -8,7 +8,7 @@ import sqlite3
 import uuid
 import yaml
 from .runtime import LUTRIS,library_path
-from .registration import STATE
+from .registration import STATE, steam_game_id
 
 
 def create_variant(source_id,name,identity,environment=None,dll_overrides=None,lutris=None,state=STATE):
@@ -48,6 +48,8 @@ def create_variant(source_id,name,identity,environment=None,dll_overrides=None,l
             try:
                 with target.open('x') as stream:yaml.safe_dump(config,stream)
                 values=dict(source);values.pop('id',None)
+                if config.get('playlite_steam_id'):
+                    values['id']=steam_game_id(db,config['playlite_steam_id'],start=2)
                 values.update(name=name,sortname=name,slug=slug,configpath=config_name)
                 columns=list(values)
                 query='INSERT INTO games ('+','.join('"'+column+'"' for column in columns)+') VALUES ('+','.join('?' for _ in columns)+')'

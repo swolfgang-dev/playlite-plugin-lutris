@@ -134,7 +134,8 @@ class Plugin(InstallationPlugin):
         return game
 
     def commit(self, widget, game):
-        result = self.lutris.register(widget.registration, game['WineRunner'], game.get('LaunchArguments', ''))
+        result = self.lutris.register(widget.registration, game['WineRunner'], game.get('LaunchArguments', ''),
+                                      steam_id=(game.get('MetadataIds') or {}).get('SteamMetadata') or game.get('SteamAppId'))
         game.update(GameProvider='LutrisIntegration', LutrisId=result['id'], Prefix=result['prefix'])
         widget.fields['LutrisId'].setText(str(result['id']))
         return game
@@ -170,6 +171,6 @@ class Plugin(InstallationPlugin):
 
     def cli_commit(self, args, game, plugins):
         registration = plan(game['Executable'], game['Name'], installation_directory=game['InstallDirectory'], prefix=game['Prefix'])
-        result = plugins['LutrisIntegration'].register(registration, args.runner, args.arguments)
+        result = plugins['LutrisIntegration'].register(registration, args.runner, args.arguments, steam_id=args.steam_id)
         game.update(GameProvider='LutrisIntegration', LutrisId=result['id'], Prefix=result['prefix'])
         return game
