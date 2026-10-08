@@ -104,7 +104,9 @@ class IntegrationTests(unittest.TestCase):
             game = {'Id': 'example', 'Name': 'Example', 'LutrisId': '42'}
             editor = MetadataEditor(game, Path(directory))
             self.assertEqual(editor.play_actions.cards[0].integration.currentData(), 'LutrisIntegration')
-            editor.play_actions.remove(editor.play_actions.cards[0])
+            from PyQt6.QtWidgets import QDialog
+            with patch('playlite.lifecycle.run_dialog', return_value=QDialog.DialogCode.Accepted):
+                editor.play_actions.remove(editor.play_actions.cards[0])
             result = editor.collect()
             self.assertIsNone(result['GameProvider'])
             self.assertNotIn('LutrisId', result)
