@@ -69,7 +69,7 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(json.loads((data / 'library.json').read_text()), saved)
             editor = MetadataEditor(game, data)
             tabs = editor.findChild(QTabWidget)
-            self.assertEqual([tabs.tabText(i) for i in range(tabs.count())], ['Installation', 'Metadata', 'Images'])
+            self.assertEqual([tabs.tabText(i) for i in range(tabs.count())], ['Installation', 'Metadata', 'Images', 'Automation'])
             editor.reject()
 
     def test_added_date_is_preserved_on_edits_and_supplied_dates_are_kept(self):
